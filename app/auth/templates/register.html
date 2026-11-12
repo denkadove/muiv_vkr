@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+    {% block content %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h1>registration</h1>
+
+        <form method="POST">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.username.label(class="form-label") }} {{
+                form.username(class="form-control") }} {% if
+                form.username.errors %}
+                <div class="error">
+                    {% for error in form.username.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.email.label(class="form-label") }} {{
+                form.email(class="form-control") }} {% if form.email.errors %}
+                <div class="error">
+                    {% for error in form.email.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password.label(class="form-label") }} {{
+                form.password(class="form-control") }} {% if
+                form.password.errors %}
+                <div class="error">
+                    {% for error in form.password.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.confirm_password.label(class="form-label") }} {{
+                form.confirm_password(class="form-control") }} {% if
+                form.confirm_password.errors %}
+                <div class="error">
+                    {% for error in form.confirm_password.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <div class="checkbox-field">
+                    {{ form.agree_personal_data(class="checkbox-input") }}
+                    <label for="{{ form.agree_personal_data.id }}" class="checkbox-label">
+                        Согласен с <a href="#">обработкой персональных данных</a>
+                    </label>
+                </div>
+                {% if form.agree_personal_data.errors %}
+                <div class="error">
+                    {% for error in form.agree_personal_data.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+
+    {% endblock %}

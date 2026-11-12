@@ -1,4 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 <h1> {{ config.APP_NAME }} Index page </h1>
+    {%  if usersList  %}
+        {%  for user in usersList %}
+            <p> {{ user.id }} </p>
+        {% endfor %}
+    {% else %}
+        <p> Не найдено пользователя с правами админа! <a href="{{ url_for('auth.register') }}" > Зарегестрируйтесь! </a> </p>
+    {% endif %}
 {% endblock %}

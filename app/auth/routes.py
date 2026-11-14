@@ -1,6 +1,6 @@
 """Маршруты аутентификации: вход, выход, регистрация."""
 
-from flask import Response, flash, redirect, render_template, url_for
+from flask import Response, flash, redirect, render_template, session, url_for
 from flask_login import current_user, login_user, logout_user
 
 from app import bcrypt
@@ -15,8 +15,9 @@ def login() -> Response | str:
     """Вход в систему.
 
     Особенности:
-        - авторизованного пользователя перенаправляет в профиль;
-        - заблокированному аккаунту вход запрещён.
+        - заблокированному аккаунту вход запрещён;
+        - сессия при входе очищается от ключей режима переключения
+          (иначе вход дал бы права администратора).
 
     Возвращает:
         Response | str: HTML формы входа или редирект.
@@ -32,6 +33,10 @@ def login() -> Response | str:
             if not user.active:
                 flash("Ваша учётная запись заблокирована. Обратитесь к администратору.", "error")
                 return render_template("login.html", form=form)
+            # Новая сессия не должна наследовать режим переключения,
+            # иначе вход под своим паролём мог бы дать права администратора
+            session.pop("impersonator_id", None)
+            session.pop("impersonated_user_id", None)
             login_user(user)
             flash(f"Добро пожаловать, {user.username}!", "success")
             return redirect(url_for("index"))
@@ -43,23 +48,21 @@ def login() -> Response | str:
 
 @auth_bp.route("/logout")
 def logout() -> Response:
-    """Выход из системы.
+    """Выход из системы; очищает ключи режима переключения.
 
     Возвращает:
         Response: редирект на главную страницу.
     """
     logout_user()
+    session.pop("impersonator_id", None)
+    session.pop("impersonated_user_id", None)
     flash("Вы успешно вышли из системы.", "success")
     return redirect(url_for("index"))
 
 
 @auth_bp.route("/registration", methods=["GET", "POST"])
 def register() -> Response | str:
-    """Регистрация нового пользователя.
-
-    Особенности:
-        - создание пользователя выполняет сервис create_user;
-        - ошибки уникальности логина/email показываются через flash.
+    """Регистрация нового пользователя; ошибки уникальности — через flash.
 
     Возвращает:
         Response | str: HTML формы регистрации или редирект на вход.

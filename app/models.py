@@ -6,6 +6,10 @@ from flask_login import UserMixin
 
 from app import db
 
+# Группа 1 — администратор, группа 2 — обычный пользователь
+ADMIN_GROUP_ID: int = 1
+USER_GROUP_ID: int = 2
+
 
 class UserGroup(db.Model):
     """Группа пользователей, определяет права доступа."""
@@ -29,6 +33,18 @@ class User(UserMixin, db.Model):
     active = db.Column(db.Boolean, default=True)
     group_id = db.Column(db.Integer, db.ForeignKey("user_groups.id"), nullable=True)
     group = db.relationship("UserGroup", backref="users")
-    # Время создания в UTC; lambda нужна, чтобы время вычислялось при вставке,
-    # а не при старте приложения
+    # UTC; lambda — чтобы время фиксировалось при вставке, а не при старте
     created = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    @property
+    def is_active(self) -> bool:
+        """Признак активности учётной записи для flask-login.
+
+        Особенности:
+            - перекрывает всегда-True значение UserMixin;
+            - flask-login сам не пускает и разлогинивает неактивных.
+
+        Возвращает:
+            bool: True, если учётная запись активна.
+        """
+        return bool(self.active)

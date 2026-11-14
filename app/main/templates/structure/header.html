@@ -1,7 +1,5 @@
-<!-- Шапка сайта: логотип, навигация и flash-сообщения -->
 <header class="site-header">
     <div class="site-header-inner">
-        <!-- Логотип со ссылкой на главную страницу -->
         <a class="site-logo" href="{{ url_for('index') }}">
             <img src="{{ url_for('static', filename='images/logo.svg') }}"
                  alt="Логотип: коробка товара" width="28" height="28">
@@ -11,6 +9,9 @@
             <ul class="site-nav">
                 {% if current_user.is_authenticated %}
                     <li>Привет, <a href="{{ url_for('profile') }}" >{{ current_user.username }}</a></li>
+                    {% if current_user.group_id == ADMIN_GROUP_ID %}
+                    <li><a href="{{ url_for('admin.users_list') }}">Админ-панель</a></li>
+                    {% endif %}
                     <li><a href="{{ url_for('auth.logout') }}" > Выйти </a></li>
                 {% else %}
                     <li><a href="{{ url_for('auth.login') }}" > Войти </a></li>
@@ -27,4 +28,14 @@
         {% endfor %}
     {% endif %}
 {% endwith %}
+
+{% if impersonator and current_user.is_authenticated %}
+<div class="impersonation-banner">
+    <span>Режим: вы работаете от имени <strong>{{ current_user.username }}</strong></span>
+    <form method="POST" action="{{ url_for('admin.impersonate_stop') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn btn-secondary">Вернуться ({{ impersonator.username }})</button>
+    </form>
+</div>
+{% endif %}
 </header>

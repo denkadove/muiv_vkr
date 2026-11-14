@@ -1,0 +1,11 @@
+{# Базовый шаблон страниц админ-панели: широкий контейнер и сайдбар слева #}
+{% extends "base.html" %}
+{% block main_class %}site-main site-main--admin{% endblock %}
+{% block content %}
+<div class="admin-layout">
+    {% include "structure/admin_sidebar.html" %}
+    <div class="admin-content">
+        {% block admin_content %}{% endblock %}
+    </div>
+</div>
+{% endblock %}

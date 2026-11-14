@@ -1,4 +1,4 @@
-"""Формы WTForms для аутентификации."""
+"""Формы WTForms для аутентификации и администрирования."""
 
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -6,8 +6,17 @@ from wtforms import (
     StringField,
     SubmitField,
     BooleanField,
+    SelectField,
 )
 from wtforms.validators import DataRequired, Email, EqualTo, Length
+
+from app.models import ADMIN_GROUP_ID, USER_GROUP_ID
+
+# Выбор группы из констант: заменить на запрос к БД
+GROUP_CHOICES: list[tuple[int, str]] = [
+    (ADMIN_GROUP_ID, "Администратор"),
+    (USER_GROUP_ID, "Пользователь"),
+]
 
 
 class RegisterForm(FlaskForm):
@@ -42,7 +51,7 @@ class LoginForm(FlaskForm):
 
 
 class CreateUserForm(FlaskForm):
-    """Создание пользователя администратором (в разработке)."""
+    """Создание пользователя администратором: группа и активность задаются формой."""
 
     username = StringField("Логин", validators=[DataRequired(), Length(min=3, max=255)])
     email = StringField("Email", validators=[DataRequired(), Email()])
@@ -54,6 +63,16 @@ class CreateUserForm(FlaskForm):
             EqualTo("password", message="Пароли должны совпадать"),
         ],
     )
-    active = True
-    group_id = 1
+    active = BooleanField("Учётная запись активна", default=True)
+    group_id = SelectField("Группа", coerce=int, choices=GROUP_CHOICES, default=USER_GROUP_ID)
     submit = SubmitField("Создать пользователя")
+
+
+class UserEditForm(FlaskForm):
+    """Редактирование пользователя администратором (без смены пароля)."""
+
+    username = StringField("Логин", validators=[DataRequired(), Length(min=3, max=255)])
+    email = StringField("Email", validators=[DataRequired(), Email()])
+    active = BooleanField("Учётная запись активна")
+    group_id = SelectField("Группа", coerce=int, choices=GROUP_CHOICES)
+    submit = SubmitField("Сохранить")

@@ -16,12 +16,12 @@
     </head>
 {% block header %}{% include 'structure/header.html' %}{% endblock %}
 
-<!-- Основная часть страницы: контейнер стилизуется классом site-main -->
-<main class="site-main">
+<main class="{% block main_class %}site-main{% endblock %}">
 {% block content %}
 {% endblock %}
 </main>
 
+{% include 'structure/confirm_modal.html' %}
 <script type="text/javascript" src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% block footer %}{% include 'structure/footer.html' %}{% endblock %}
 

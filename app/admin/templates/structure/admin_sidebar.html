@@ -1,0 +1,13 @@
+{# Сайдбар админ-панели: разделы-выпадашки без JS, текущий пункт подсвечен #}
+<nav class="admin-sidebar" aria-label="Навигация админ-панели">
+    <details class="admin-menu-section" open>
+        <summary class="admin-menu-title">Система</summary>
+        <ul class="admin-menu-list">
+            {% set users_endpoints = ('admin.users_list', 'admin.user_create', 'admin.user_edit') %}
+            {% set users_active = request.endpoint in users_endpoints %}
+            <li>
+                <a class="admin-menu-link{{ ' is-active' if users_active else '' }}" {% if users_active %}aria-current="page"{% endif %} href="{{ url_for('admin.users_list') }}">Пользователи</a>
+            </li>
+        </ul>
+    </details>
+</nav>

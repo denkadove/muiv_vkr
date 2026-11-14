@@ -1,0 +1,62 @@
+{% extends "structure/admin_base.html" %}
+{% block title %}Правка пользователя — {{ config.APP_NAME }}{% endblock %}
+{% block admin_content %}
+    <h2>Редактирование: {{ user.username }}</h2>
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.username.label(class="form-label") }} {{ form.username(class="form-control") }}
+            {% if form.username.errors %}
+            <div class="error">
+                {% for error in form.username.errors %}
+                <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.email.label(class="form-label") }} {{ form.email(class="form-control") }}
+            {% if form.email.errors %}
+            <div class="error">
+                {% for error in form.email.errors %}
+                <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <div class="checkbox-field">
+                {{ form.active(class="checkbox-input") }}
+                {{ form.active.label(class="checkbox-label") }}
+            </div>
+            {% if form.active.errors %}
+            <div class="error">
+                {% for error in form.active.errors %}
+                <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.group_id.label(class="form-label") }} {{ form.group_id(class="form-control") }}
+            {% if form.group_id.errors %}
+            <div class="error">
+                {% for error in form.group_id.errors %}
+                <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+
+    <p><a href="{{ url_for('admin.users_list') }}">← К списку пользователей</a></p>
+{% endblock %}

@@ -51,7 +51,9 @@ p {
     margin: 0 0 10px;
 }
 
-.site-main a {
+/* Кнопки и пункты меню сайдбара исключены: у них свои цвета, иначе текст
+   btn-primary перекрашивался в синий (цвет фона) и становился невидим */
+.site-main a:not(.btn):not(.admin-menu-link) {
     color: var(--color-accent);
 }
 
@@ -136,6 +138,21 @@ p {
     border-color: var(--color-warning);
 }
 
+/* 5.1 Плашка режима переключения на пользователя */
+.impersonation-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 10px 16px 0;
+    padding: 10px 14px;
+    background: #fdf3e4;
+    border-left: 4px solid var(--color-warning);
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+}
+
 /* 6. Основная часть страницы */
 .site-main {
     flex: 1;
@@ -143,6 +160,115 @@ p {
     max-width: 960px;
     margin: 0 auto;
     padding: 16px;
+}
+
+/* 6.1 Сайдбар навигации админ-панели: на мобильных над контентом,
+   на десктопе колонка слева, прилипающая при скролле */
+.admin-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.admin-content {
+    min-width: 0; /* таблица не растягивает колонку контента */
+}
+
+.admin-sidebar {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    align-self: flex-start;
+    width: 100%;
+}
+
+.admin-menu-section {
+    border-bottom: 1px solid var(--color-border);
+}
+
+.admin-menu-section:last-child {
+    border-bottom: none;
+}
+
+/* Заголовок раздела: строка раскрытия, шеврон поворачивается при открытии */
+.admin-menu-title {
+    list-style: none;
+    cursor: pointer;
+    position: relative;
+    padding: 12px 32px 12px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    user-select: none;
+}
+
+.admin-menu-title::-webkit-details-marker {
+    display: none;
+}
+
+.admin-menu-title::after {
+    content: "▾";
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: transform 0.15s ease;
+}
+
+.admin-menu-section[open] > .admin-menu-title::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.admin-menu-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 6px;
+}
+
+.admin-menu-link {
+    display: block;
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    color: var(--color-text);
+    text-decoration: none;
+    border-left: 3px solid transparent;
+}
+
+.admin-menu-link:hover {
+    background: var(--color-accent-soft);
+}
+
+/* Текущий раздел: подложка, акцентная полоса слева, полужирный текст */
+.admin-menu-link.is-active {
+    background: var(--color-accent-soft);
+    border-left-color: var(--color-accent);
+    color: var(--color-accent-dark);
+    font-weight: 600;
+}
+
+/* Широкий контейнер админки: сайдбару нужно место */
+.site-main--admin {
+    max-width: 1200px;
+}
+
+@media (min-width: 960px) {
+    .admin-layout {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+
+    .admin-sidebar {
+        width: 240px;
+        flex-shrink: 0;
+        position: sticky;
+        top: 16px;
+    }
+
+    .admin-content {
+        flex: 1;
+    }
 }
 
 /* 7. Формы */
@@ -225,6 +351,67 @@ form {
     background: var(--color-accent-dark);
 }
 
+/* 8.1 Второстепенная и опасная кнопки */
+.btn-secondary {
+    color: var(--color-accent);
+    background: var(--color-accent-soft);
+}
+
+.btn-secondary:hover {
+    background: #d5e4f7;
+}
+
+.btn-danger {
+    color: #ffffff;
+    background: var(--color-error);
+}
+
+.btn-danger:hover {
+    background: #931616;
+}
+
+/* 8.2 Таблицы: горизонтальный скролл контейнера на мобильных */
+.table-wrap {
+    overflow-x: auto;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.data-table th,
+.data-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.data-table thead th {
+    background: var(--color-accent-soft);
+    white-space: nowrap;
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Компактные кнопки в ячейках таблицы */
+.data-table .btn {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+}
+
+.table-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
 /* 9. Футер */
 .site-footer {
     padding: 14px 16px;
@@ -233,6 +420,52 @@ form {
     color: var(--color-muted);
     background: var(--color-surface);
     border-top: 1px solid var(--color-border);
+}
+
+/* 9.1 Модальное окно подтверждения: затемнение поверх страницы,
+   открывается классом is-open из js/main.js */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    overflow-y: auto; /* низкие экраны: карточка скроллится, не обрезаясь */
+    padding: 16px;
+    background: rgba(26, 35, 51, 0.5);
+}
+
+.modal-overlay.is-open {
+    display: flex;
+}
+
+.modal-card {
+    margin: auto; /* центрирует, при нехватке высоты прокрутка идёт от верха */
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(26, 35, 51, 0.25);
+    max-width: 420px;
+    width: 100%;
+    padding: 20px;
+}
+
+.modal-title {
+    margin: 0 0 10px;
+    font-size: 1.15rem;
+}
+
+.modal-text {
+    margin: 0 0 18px;
+    overflow-wrap: break-word; /* длинный логин не ломает вёрстку */
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 /* 10. Планшет и выше */

@@ -1,15 +1,18 @@
+"""Формы WTForms для аутентификации."""
+
 from flask_wtf import FlaskForm
 from wtforms import (
     PasswordField,
     StringField,
     SubmitField,
     BooleanField,
-    HiddenField,
 )
+from wtforms.validators import DataRequired, Email, EqualTo, Length
 
-from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional
 
 class RegisterForm(FlaskForm):
+    """Регистрация: логин, email, пароли, согласие на обработку данных."""
+
     username = StringField("Логин", validators=[DataRequired(), Length(min=3, max=255)])
     email = StringField("Email", validators=[DataRequired(), Email()])
     password = PasswordField("Пароль", validators=[DataRequired(), Length(min=6)])
@@ -21,8 +24,6 @@ class RegisterForm(FlaskForm):
         ],
     )
 
-    group_id = HiddenField("Группа", default=1)
-
     agree_personal_data = BooleanField(
         "Согласие на обработку персональных данных",
         validators=[DataRequired(message="Необходимо согласие на обработку персональных данных")],
@@ -32,6 +33,8 @@ class RegisterForm(FlaskForm):
 
 
 class LoginForm(FlaskForm):
+    """Вход в систему: логин и пароль."""
+
     username = StringField("Логин", validators=[DataRequired()])
     password = PasswordField("Пароль", validators=[DataRequired()])
     remember_me = BooleanField("Запомнить меня")
@@ -39,6 +42,8 @@ class LoginForm(FlaskForm):
 
 
 class CreateUserForm(FlaskForm):
+    """Создание пользователя администратором (в разработке)."""
+
     username = StringField("Логин", validators=[DataRequired(), Length(min=3, max=255)])
     email = StringField("Email", validators=[DataRequired(), Email()])
     password = PasswordField("Пароль", validators=[DataRequired(), Length(min=6)])

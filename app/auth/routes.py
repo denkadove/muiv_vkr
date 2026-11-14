@@ -1,13 +1,26 @@
-from flask import flash, redirect, render_template, url_for
+"""Маршруты аутентификации: вход, выход, регистрация."""
+
+from flask import Response, flash, redirect, render_template, url_for
 from flask_login import current_user, login_user, logout_user
 
-from app import bcrypt, db
+from app import bcrypt
 from app.auth import auth_bp
 from app.forms import LoginForm, RegisterForm
-from app.models import User, UserGroup
+from app.models import User
+from app.services import create_user
+
 
 @auth_bp.route("/login", methods=["GET", "POST"])
-def login():
+def login() -> Response | str:
+    """Вход в систему.
+
+    Особенности:
+        - авторизованного пользователя перенаправляет в профиль;
+        - заблокированному аккаунту вход запрещён.
+
+    Возвращает:
+        Response | str: HTML формы входа или редирект.
+    """
     if current_user.is_authenticated:
         return redirect(url_for("profile"))
 
@@ -29,47 +42,36 @@ def login():
 
 
 @auth_bp.route("/logout")
-def logout():
+def logout() -> Response:
+    """Выход из системы.
+
+    Возвращает:
+        Response: редирект на главную страницу.
+    """
     logout_user()
     flash("Вы успешно вышли из системы.", "success")
     return redirect(url_for("index"))
 
 
 @auth_bp.route("/registration", methods=["GET", "POST"])
-def register():
+def register() -> Response | str:
+    """Регистрация нового пользователя.
 
+    Особенности:
+        - создание пользователя выполняет сервис create_user;
+        - ошибки уникальности логина/email показываются через flash.
+
+    Возвращает:
+        Response | str: HTML формы регистрации или редирект на вход.
+    """
     form = RegisterForm()
 
     if form.validate_on_submit():
-        existing_user = User.query.filter_by(username=form.username.data).first()
-        existing_email = User.query.filter_by(email=form.email.data).first()
-
-        if existing_user:
-            flash("Пользователь с таким логином уже существует.", "error")
+        try:
+            create_user(form)
+        except ValueError as error:
+            flash(str(error), "error")
             return render_template("register.html", form=form)
-
-        if existing_email:
-            flash("Пользователь с таким email уже существует.", "error")
-            return render_template("register.html", form=form)
-
-        hashed_password = bcrypt.generate_password_hash(form.password.data).decode(
-            "utf-8"
-        )
-
-        user = User(
-            username=form.username.data,
-            email=form.email.data,
-            password=hashed_password,
-            group_id=2,
-        )
-
-        userList = User.query.all()
-
-        if userList == []:
-            user.group_id=1
-
-        db.session.add(user)
-        db.session.commit()
 
         flash(
             "Регистрация прошла успешно! Теперь вы можете войти в систему.",

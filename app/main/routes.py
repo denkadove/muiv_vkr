@@ -1,52 +1,60 @@
-from flask import Response, render_template, url_for, redirect
+"""Маршруты основной части приложения."""
+
+from flask import Flask, Response, render_template, url_for, redirect
 from flask_login import login_required
-from app import db
 
-from app.models import User, UserGroup
+from app.models import User
 
-def register_routes(app):
-    """Регистрирует маршруты приложения и обработчики ошибок."""
 
+def register_routes(app: Flask) -> None:
+    """Регистрирует маршруты и обработчики ошибок основной части.
+
+    Аргументы:
+        app (Flask): экземпляр приложения.
+
+    Возвращает:
+        None
+    """
     @app.errorhandler(404)
     def page_not_found(error: Exception) -> tuple[str, int]:
-        """Обработчик ошибки 404: страница не найдена.
+        """Отдаёт страницу 404.
 
         Аргументы:
-            error: объект исключения HTTPException от Flask.
+            error (Exception): исключение, вызвавшее ошибку.
 
         Возвращает:
-            tuple[str, int]: HTML страницы ошибки и код 404.
+            tuple[str, int]: HTML страницы и код 404.
         """
         return render_template("404.html"), 404
 
     @app.errorhandler(500)
     def internal_server_error(error: Exception) -> tuple[str, int]:
-        """Обработчик ошибки 500: внутренняя ошибка сервера.
+        """Отдаёт страницу 500.
 
         Аргументы:
-            error: объект исключения от Flask.
+            error (Exception): исключение, вызвавшее ошибку.
 
         Возвращает:
-            tuple[str, int]: HTML страницы ошибки и код 500.
+            tuple[str, int]: HTML страницы и код 500.
         """
         return render_template("500.html"), 500
 
     @app.route("/")
     def index() -> str:
-        """Главная страница приложения.
+        """Главная страница: список зарегистрированных пользователей.
 
         Возвращает:
-            str: HTML главной страницы со списком пользователей.
+            str: HTML главной страницы.
         """
-        usersList = User.query.all()
-        return render_template("index.html", usersList=usersList)
+        users_list: list[User] = User.query.all()
+        return render_template("index.html", users_list=users_list)
 
     @app.route("/index")
     def index_alias() -> Response:
-        """Старый адрес главной страницы.
+        """Перенаправляет /index на канонический адрес "/".
 
-        Перенаправляет на канонический адрес "/", сохраняя
-        работоспособность существующих ссылок.
+        Особенности:
+            - сохранена для совместимости существующих ссылок.
 
         Возвращает:
             Response: редирект на главную страницу.
@@ -56,7 +64,10 @@ def register_routes(app):
     @app.route("/profile")
     @login_required
     def profile() -> str:
-        """Страница профиля пользователя (требует входа в систему).
+        """Страница профиля пользователя.
+
+        Особенности:
+            - доступна только после входа (login_required).
 
         Возвращает:
             str: HTML страницы профиля.

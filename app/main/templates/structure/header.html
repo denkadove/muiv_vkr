@@ -10,7 +10,7 @@
         <nav>
             <ul class="site-nav">
                 {% if current_user.is_authenticated %}
-                    <li><a href="{{ url_for('profile') }}" >Привет, {{ current_user.username }}</a></li>
+                    <li>Привет, <a href="{{ url_for('profile') }}" >{{ current_user.username }}</a></li>
                     <li><a href="{{ url_for('auth.logout') }}" > Выйти </a></li>
                 {% else %}
                     <li><a href="{{ url_for('auth.login') }}" > Войти </a></li>

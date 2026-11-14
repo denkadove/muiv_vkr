@@ -5,14 +5,14 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta
             name="description"
-            content="{% block meta_description %}MUIV VKR PROJECT.{% endblock %}"
+            content="{% block meta_description %}{{ config.APP_NAME }}{% endblock %}"
         />
-        <title>{% block title %} {{ config.APP_NAME }}{% endblock %}</title>
+        <title>{% block title %}{{ config.APP_NAME }}{% endblock %}</title>
         <link
             rel="stylesheet"
             href="{{ url_for('static', filename='css/style.css') }}"
         />
-        <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}" />
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}" />
     </head>
 {% block header %}{% include 'structure/header.html' %}{% endblock %}
 

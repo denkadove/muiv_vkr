@@ -1,12 +1,24 @@
-<ul>
-    {% if current_user.is_authenticated %}
-        <li><a href="{{ url_for('profile') }}" >Привет, {{ current_user.username }}</a></li>
-        <li><a href="{{ url_for('auth.logout') }}" > Выйти </a></li>
-    {% else %}
-        <li><a href="{{ url_for('auth.login') }}" > Войти </a></li>
-        <li><a href="{{ url_for('auth.register') }}" > Регистрация </a></li>
-    {% endif %}
-</ul>
+<!-- Шапка сайта: логотип, навигация и flash-сообщения -->
+<header class="site-header">
+    <div class="site-header-inner">
+        <!-- Логотип со ссылкой на главную страницу -->
+        <a class="site-logo" href="{{ url_for('index') }}">
+            <img src="{{ url_for('static', filename='images/logo.svg') }}"
+                 alt="Логотип: коробка товара" width="28" height="28">
+            <span class="site-logo-text">{{ config.APP_NAME }}</span>
+        </a>
+        <nav>
+            <ul class="site-nav">
+                {% if current_user.is_authenticated %}
+                    <li><a href="{{ url_for('profile') }}" >Привет, {{ current_user.username }}</a></li>
+                    <li><a href="{{ url_for('auth.logout') }}" > Выйти </a></li>
+                {% else %}
+                    <li><a href="{{ url_for('auth.login') }}" > Войти </a></li>
+                    <li><a href="{{ url_for('auth.register') }}" > Регистрация </a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -15,3 +27,4 @@
         {% endfor %}
     {% endif %}
 {% endwith %}
+</header>

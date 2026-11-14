@@ -1,3 +1,306 @@
+/* ============================================================
+   Набор стилей приложения (plain CSS, без фреймворков)
+   Подход: mobile-first — базовые стили для смартфонов,
+   медиазапросы для планшетов (от 640px) и десктопов (от 960px).
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. Переменные темы: цвета, отступы, скругления.
+   Схема построена от фирменного синего #1764c7: холодные
+   нейтральные тона фона и текста, акценты только синим.
+   ------------------------------------------------------------ */
+:root {
+    --color-bg: #f5f7fa;          /* фон страницы: холодный светло-серый */
+    --color-surface: #ffffff;     /* фон панелей, шапки, футера */
+    --color-text: #1a2333;        /* основной текст: тёмный сине-серый */
+    --color-muted: #5f6b7a;       /* вторичный текст: холодный серый */
+    --color-accent: #1764c7;      /* фирменный синий (ссылки, кнопки) */
+    --color-accent-dark: #1152a5; /* затемнённый акцент при наведении */
+    --color-accent-soft: #e9f0fb; /* светлый оттенок акцента для подложек */
+    --color-border: #d8e0ea;      /* цвет рамок: серо-голубой */
+    --color-success: #15803d;     /* успех (flash-сообщения) */
+    --color-error: #b91c1c;       /* ошибка (flash, валидация) */
+    --color-warning: #b45309;     /* предупреждение (про запас) */
+    --radius: 8px;                /* скругление углов */
+}
+
+/* ------------------------------------------------------------
+   2. Сброс и базовые стили.
+   ------------------------------------------------------------ */
+* {
+    box-sizing: border-box; /* ширина элементов включает рамки и паддинги */
+}
+
 body {
-  background: #c4c4c4;
+    margin: 0; /* сбрасываем отступ браузера */
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--color-text);
+    background: var(--color-bg);
+    /* колонка на всю высоту экрана: шапка, контент, футер внизу */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ------------------------------------------------------------
+   3. Типографика.
+   clamp() плавно меняет размер заголовков на разных экранах.
+   ------------------------------------------------------------ */
+h1 {
+    /* запасной размер для старых браузеров */
+    font-size: 1.5rem;
+    font-size: clamp(1.4rem, 2vw + 1rem, 1.8rem);
+    margin: 0 0 14px;
+}
+
+h2 {
+    font-size: 1.25rem;
+    font-size: clamp(1.15rem, 1.5vw + 1rem, 1.45rem);
+    margin: 0 0 10px;
+}
+
+p {
+    margin: 0 0 10px;
+}
+
+/* Ссылки в основной части страницы */
+.site-main a {
+    color: var(--color-accent);
+}
+
+/* ------------------------------------------------------------
+   4. Шапка сайта: логотип и навигация.
+   ------------------------------------------------------------ */
+.site-header {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* Внутренний контейнер шапки: логотип слева, меню справа.
+   На узких экранах строки переносятся (flex-wrap). */
+.site-header-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 10px 16px;
+}
+
+/* Логотип-ссылка на главную страницу */
+.site-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: var(--color-text);
+    font-weight: 700;
+    /* компактный размер на мобильных: название приложения длинное */
+    font-size: 0.9rem;
+}
+
+.site-logo img {
+    display: block; /* убираем лишний отступ под изображением */
+}
+
+/* При наведении подсвечиваем только текст, иконку не меняем */
+.site-logo:hover .site-logo-text {
+    color: var(--color-accent);
+}
+
+/* Меню: пункты в строку, при нехватке места переносятся */
+.site-nav {
+    list-style: none;      /* убираем маркеры списка */
+    display: flex;
+    flex-wrap: wrap;       /* перенос пунктов на узких экранах */
+    gap: 6px 18px;         /* промежутки между пунктами */
+    margin: 0;
+    padding: 0;            /* отступы задаёт site-header-inner */
+}
+
+.site-nav a {
+    text-decoration: none;
+    color: var(--color-text);
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.site-nav a:hover {
+    color: var(--color-accent);
+    background: var(--color-accent-soft); /* мягкая подложка при наведении */
+}
+
+/* ------------------------------------------------------------
+   5. Flash-сообщения (успех, ошибка, предупреждение).
+   Цветная полоса слева визуально различает тип сообщения.
+   ------------------------------------------------------------ */
+.alert {
+    margin: 10px 16px 0;
+    padding: 10px 14px;
+    border-left: 4px solid;
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+}
+
+.alert-success {
+    color: var(--color-success);
+    background: #e7f6ec;
+    border-color: var(--color-success);
+}
+
+.alert-error {
+    color: var(--color-error);
+    background: #fdeaea;
+    border-color: var(--color-error);
+}
+
+.alert-warning {
+    color: var(--color-warning);
+    background: #fdf3e4;
+    border-color: var(--color-warning);
+}
+
+/* ------------------------------------------------------------
+   6. Основная часть страницы.
+   ------------------------------------------------------------ */
+.site-main {
+    flex: 1;              /* занимает свободную высоту, футер прижат вниз */
+    width: 100%;
+    max-width: 960px;     /* ограничиваем ширину строки на больших экранах */
+    margin: 0 auto;       /* центрирование контейнера */
+    padding: 16px;
+}
+
+/* ------------------------------------------------------------
+   7. Формы.
+   ------------------------------------------------------------ */
+/* Формы не растягиваются на всю ширину десктопа */
+form {
+    max-width: 480px;
+}
+
+.form-group {
+    margin-bottom: 14px;
+}
+
+.form-label {
+    display: block;       /* подпись над полем — удобно на мобильных */
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.form-control {
+    width: 100%;          /* поле на всю ширину формы (mobile-first) */
+    padding: 10px 12px;
+    font: inherit;        /* наследуем шрифт, не системный у инпутов */
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+}
+
+/* Подсветка активного поля для удобства ввода */
+.form-control:focus {
+    border-color: var(--color-accent);
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+}
+
+/* Строка чекбокса: галочка и подпись в один ряд */
+.checkbox-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.checkbox-input {
+    width: 18px;
+    height: 18px;
+    margin-top: 3px;      /* выравнивание относительно первой строки текста */
+    flex-shrink: 0;       /* не сжимать чекбокс на узких экранах */
+}
+
+.checkbox-label {
+    font-size: 0.9rem;
+    color: var(--color-muted);
+}
+
+/* Ошибки валидации под полем */
+.error {
+    margin-top: 4px;
+    color: var(--color-error);
+    font-size: 0.85rem;
+}
+
+.error span {
+    display: block;       /* каждая ошибка с новой строки */
+}
+
+/* ------------------------------------------------------------
+   8. Кнопки.
+   ------------------------------------------------------------ */
+.btn {
+    display: inline-block;
+    padding: 10px 18px;
+    font: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    border: none;
+    border-radius: var(--radius);
+}
+
+.btn-primary {
+    color: #ffffff;
+    background: var(--color-accent);
+}
+
+.btn-primary:hover {
+    background: var(--color-accent-dark);
+}
+
+/* ------------------------------------------------------------
+   9. Футер.
+   ------------------------------------------------------------ */
+.site-footer {
+    padding: 14px 16px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+}
+
+/* ------------------------------------------------------------
+   10. Адаптивность: планшет и выше (от 640px).
+   Увеличиваем внешние отступы на широких экранах.
+   ------------------------------------------------------------ */
+@media (min-width: 640px) {
+    .site-header-inner {
+        padding: 12px 24px;
+    }
+
+    /* На широких экранах название в лого — обычный размер */
+    .site-logo {
+        font-size: 1rem;
+    }
+
+    .site-main {
+        padding: 24px;
+    }
+
+    .alert {
+        margin: 12px 24px 0;
+    }
+}
+
+/* ------------------------------------------------------------
+   11. Адаптивность: десктоп (от 960px).
+   ------------------------------------------------------------ */
+@media (min-width: 960px) {
+    .site-main {
+        padding: 32px 24px;
+    }
 }

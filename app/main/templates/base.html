@@ -16,9 +16,11 @@
     </head>
 {% block header %}{% include 'structure/header.html' %}{% endblock %}
 
-
+<!-- Основная часть страницы: контейнер стилизуется классом site-main -->
+<main class="site-main">
 {% block content %}
 {% endblock %}
+</main>
 
 <script type="text/javascript" src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% block footer %}{% include 'structure/footer.html' %}{% endblock %}

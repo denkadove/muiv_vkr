@@ -8,7 +8,7 @@ from app.forms import (
     CreateUserForm,
     ProductForm,
     RegisterForm,
-    UserEditForm,
+    UserForm,
     MarketplaceForm,
 )
 from app.models import (
@@ -112,7 +112,7 @@ def create_user(
     return user
 
 
-def update_user(user_id: int, form: UserEditForm) -> User:
+def update_user(user_id: int, form: UserForm) -> User:
     """Обновляет данные пользователя (без смены пароля).
 
     Особенности:
@@ -121,7 +121,7 @@ def update_user(user_id: int, form: UserEditForm) -> User:
 
     Аргументы:
         user_id (int): идентификатор редактируемого пользователя.
-        form (UserEditForm): форма с новыми данными.
+        form (UserForm): форма с новыми данными.
 
     Возвращает:
         User: обновлённый пользователь.
@@ -219,10 +219,12 @@ def create_category(form: CategoryForm) -> Category:
     Исключения:
         ValueError: категория с таким названием уже существует.
     """
+
     if Category.query.filter_by(name=form.name.data).first() is not None:
         raise ValueError("Категория с таким названием уже существует.")
 
     category = Category(name=form.name.data)
+
     db.session.add(category)
     # Проверка уникальности не атомарна: дубликат ловим по ограничению БД
     try:
@@ -306,14 +308,14 @@ def delete_category(category_id: int) -> None:
     db.session.commit()
 
 
-def get_marketplaces_list() -> list[str]:
-    """Получает список маркетплейсов из БД.
-
-    Возвращает:
-        list[str]: список названий маркетплейсов.
-    """
-    marketplaces = Marketplace.query.order_by(Marketplace.name).all()
-    return [mp.name for mp in marketplaces]
+# def get_marketplaces_list() -> list[str]:
+#     """Получает список маркетплейсов из БД.
+#
+#     Возвращает:
+#         list[str]: список названий маркетплейсов.
+#     """
+#     marketplaces = Marketplace.query.order_by(Marketplace.name).all()
+#     return [mp.name for mp in marketplaces]
 
 
 def create_product(form: ProductForm) -> Product:
@@ -367,14 +369,14 @@ def update_product(product_id: int, form: ProductForm) -> Product:
     if category is None:
         raise ValueError("Указанная категория не существует.")
 
-    # Получаем объекты маркетплейсов по ID
     marketplaces: Marketplace = Marketplace.query.filter(Marketplace.id.in_(form.marketplaces.data or [])).all()
 
+    product.marketplaces=marketplaces
     product.name = form.name.data
     product.price = form.price.data
     product.description = form.description.data
     product.category_id = category.id
-    product.marketplaces = marketplaces
+
     db.session.commit()
     return product
 
@@ -412,7 +414,11 @@ def create_marketplace(form: MarketplaceForm) -> Marketplace:
         description=form.description.data,
     )
     db.session.add(marketplace)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise ValueError("Маркетплейс с таким названием уже существует.")
     return marketplace
 
 def update_marketplace(marketplace_id: int, form: MarketplaceForm) -> Marketplace:
@@ -435,7 +441,11 @@ def update_marketplace(marketplace_id: int, form: MarketplaceForm) -> Marketplac
     marketplace.name = form.name.data
     marketplace.api_key= form.api_key.data
     marketplace.description = form.description.data
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise ValueError("Маркетплейс с таким названием уже существует.")
     return marketplace
 
 def delete_marketplace(marketplace_id: int) -> None:

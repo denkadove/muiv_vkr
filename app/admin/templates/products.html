@@ -25,7 +25,7 @@
                         <td>{{ product.name }}</td>
                         <td>{{ product.price }}</td>
                         <td>{{ product.category.name if product.category else 'Нет' }}</td>
-                        <td>{{ product.marketplaces }}</td>
+                        <td>{{ product.marketplaces | map(attribute='name') | join(', ') }}</td>
                         <td>{{ product.created.strftime('%d.%m.%Y %H:%M') }}</td>
                         <td>
                             <div class="table-actions">

@@ -23,18 +23,10 @@ GROUP_CHOICES: list[tuple[int, str]] = [
     (USER_GROUP_ID, "Пользователь"),
 ]
 
-CATEGORY_CHOICES: list[tuple[int, str]] = [
-    (1, "Мелкогаборит"),
-    (2, "Крупногабарит"),
-]
-
-# MARKETPLACE_CHOICES: list[tuple[int, str]] = [
-#         (1, "Озон"),
-#         (2, "Яндекс"),
-#         (2, "ВБ"),
-#     ]
-
-
+# CATEGORY_CHOICES: list[tuple[int, str]] = [
+#     (1, "Мелкогаборит"),
+#     (2, "Крупногабарит"),
+# ]
 
 class RegisterForm(FlaskForm):
     """Регистрация: логин, email, пароли, согласие на обработку данных."""
@@ -85,7 +77,7 @@ class CreateUserForm(FlaskForm):
     submit = SubmitField("Создать пользователя")
 
 
-class UserEditForm(FlaskForm):
+class UserForm(FlaskForm):
     """Редактирование пользователя администратором (без смены пароля)."""
 
     username = StringField("Логин", validators=[DataRequired(), Length(min=3, max=255)])
@@ -104,7 +96,7 @@ class ProductForm(FlaskForm):
 
     name = StringField("Название", validators=[DataRequired(), Length(max=255)])
     price = DecimalField("Цена", validators=[DataRequired(), NumberRange(min=0)], places=2)
-    category_id = SelectField("Категория", coerce=int, choices=CATEGORY_CHOICES)
+    category_id = SelectField("Категория", coerce=int)
     marketplaces = SelectMultipleField("Маркетплейсы", coerce=int)
     description = TextAreaField("Описание")
     submit = SubmitField("Сохранить")

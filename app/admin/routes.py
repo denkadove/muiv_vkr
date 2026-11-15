@@ -1,12 +1,12 @@
 """Маршруты админ-панели: управление пользователями и переключение на них."""
 
-from flask import Response, flash, redirect, render_template, session, url_for
+from flask import Response, flash, redirect, render_template, session, url_for, request
 from flask_login import current_user, login_user, logout_user
 
 from app import db
 from app.admin import admin_bp
 from app.auth.decorators import admin_required
-from app.forms import CategoryForm, CreateUserForm, ProductForm, UserEditForm, MarketplaceForm
+from app.forms import CategoryForm, CreateUserForm, ProductForm, UserForm, MarketplaceForm
 from app.models import ADMIN_GROUP_ID, Category, Product, User, Marketplace
 from app.services import (
     create_category,
@@ -18,7 +18,6 @@ from app.services import (
     delete_user,
     delete_marketplace,
     get_categories,
-    get_marketplaces_list,
     update_category,
     update_product,
     update_user,
@@ -84,7 +83,7 @@ def user_edit(user_id: int) -> Response | str:
         flash("Пользователь не найден.", "error")
         return redirect(url_for("admin.users_list"))
 
-    form = UserEditForm(obj=user)
+    form = UserForm(obj=user)
     if form.validate_on_submit():
         try:
             update_user(user.id, form)
@@ -236,9 +235,7 @@ def product_create() -> Response | str:
         Response | str: HTML формы создания или редирект на список.
     """
     form = ProductForm()
-    form.category_id.choices = [
-        (category.id, category.name) for category in get_categories()
-    ]
+    form.category_id.choices = [(category.id, category.name) for category in get_categories()]
 
     marketplaces = Marketplace.query.order_by(Marketplace.name).all()
     form.marketplaces.choices = [(mp.id, mp.name) for mp in marketplaces]
@@ -279,13 +276,16 @@ def product_edit(product_id: int) -> Response | str:
         return redirect(url_for("admin.products_list"))
 
     form = ProductForm(obj=product)
-    form.marketplaces.data = [mp.id for mp in product.marketplaces]
+    if request.method == "GET":
+        form.marketplaces.data = [mp.id for mp in product.marketplaces]
 
     form.category_id.choices = [
         (category.id, category.name) for category in get_categories()
     ]
 
-    form.marketplaces.choices = [(mp.id, mp.name) for mp in marketplaces]
+    form.marketplaces.choices = [
+        (m.id, m.name) for m in Marketplace.query.all()
+    ]
 
     if form.validate_on_submit():
         try:
@@ -445,7 +445,7 @@ def marketplace_create() -> Response | str:
             flash(str(error), "error")
             return render_template("marketplace_form.html", form=form)
 
-        flash(f"Категория {form.name.data} создана.", "success")
+        flash(f"Магазин {form.name.data} создан.", "success")
         return redirect(url_for("admin.marketplaces_list"))
 
     return render_template("marketplace_form.html", form=form)

@@ -1,5 +1,4 @@
 """Модели базы данных."""
-
 from datetime import datetime, timezone
 
 from flask_login import UserMixin
@@ -12,6 +11,7 @@ USER_GROUP_ID: int = 2
 
 # Категория по умолчанию: сидится при первом запросе категорий, защищена от удаления
 DEFAULT_CATEGORY_NAME: str = "Без категории"
+
 
 class UserGroup(db.Model):
     """Группа пользователей, определяет права доступа."""
@@ -28,7 +28,7 @@ class User(UserMixin, db.Model):
     """Пользователь системы"""
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(255), unique=True)
+    username = db.Column(db.String(255), unique=True, nullable=False)
     email = db.Column(db.String(255), unique=True)
     # Пароль хранится только в виде bcrypt-хэша
     password = db.Column(db.String(255))
@@ -61,11 +61,10 @@ class Category(db.Model):
     name = db.Column(db.String(255), unique=True, nullable=False)
     products = db.relationship("Product", backref="category")
 
-product_marketplaces = db.Table(
-        "product_marketplaces",
-        db.Column('products_id', db.Integer, db.ForeignKey('products.id'), primary_key=True),
-        db.Column('marketplaces_id', db.Integer, db.ForeignKey('marketplaces.id'), primary_key=True)
-    )
+product_marketplaces = db.Table('product_marketplaces',
+    db.Column('product_id', db.Integer, db.ForeignKey('products.id'), primary_key=True),
+    db.Column('marketplace_id', db.Integer, db.ForeignKey('marketplaces.id'), primary_key=True)
+)
 
 class Product(db.Model):
     """Товар для размещения на маркетплейсах."""
@@ -86,6 +85,5 @@ class Marketplace(db.Model):
     __tablename__ = "marketplaces"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False, unique=True)
-    api_key = db.Column(db.String(255), nullable=True)
     description = db.Column(db.Text)
-
+    api_key = db.Column(db.String(255), nullable=True, unique=True)

@@ -27,7 +27,7 @@
             </div>
             {% endif %}
         </div>
-
+        {% if form.confirm_password %}
         <div class="form-group">
             {{ form.password.label(class="form-label") }} {{ form.password(class="form-control") }}
             {% if form.password.errors %}
@@ -49,7 +49,7 @@
             </div>
             {% endif %}
         </div>
-
+        {% endif %}
         <div class="form-group">
             <div class="checkbox-field">
                 {{ form.active(class="checkbox-input") }}

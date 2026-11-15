@@ -3,7 +3,7 @@
 from flask import Flask, Response, render_template, url_for, redirect
 from flask_login import login_required
 
-from app.models import User
+from app.models import Product
 
 
 def register_routes(app: Flask) -> None:
@@ -41,13 +41,13 @@ def register_routes(app: Flask) -> None:
 
     @app.route("/")
     def index() -> str:
-        """Главная страница: список зарегистрированных пользователей.
+        """Главная страница: таблица товаров системы.
 
         Возвращает:
             str: HTML главной страницы.
         """
-        users_list: list[User] = User.query.all()
-        return render_template("index.html", users_list=users_list)
+        products: list[Product] = Product.query.order_by(Product.id).all()
+        return render_template("index.html", products=products)
 
     @app.route("/index")
     def index_alias() -> Response:

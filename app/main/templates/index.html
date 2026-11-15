@@ -3,11 +3,11 @@
     {# TODO: Этап 5 — заменить заглушку на дашборд товаров #}
     <h1>Главная страница</h1>
 
-    {% if users_list %}
+    {% if products %}
         <p>Зарегистрированные пользователи:</p>
         <ul>
-            {% for user in users_list %}
-                <li>{{ user.username }}{% if user.group %} — {{ user.group.name }}{% endif %}</li>
+            {% for product in products %}
+                <li>{{ product.id }} {% if product.name %} {{ product.marketplaces }} {{ product.price }}{% endif %}</li>
             {% endfor %}
         </ul>
     {% else %}

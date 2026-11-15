@@ -1,0 +1,41 @@
+{% extends "structure/admin_base.html" %}
+{% block title %}Категории — {{ config.APP_NAME }}{% endblock %}
+{% block admin_content %}
+    <h2>Категории</h2>
+    <p><a class="btn btn-primary" href="{{ url_for('admin.category_create') }}">Создать категорию</a></p>
+
+    {% if categories %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Название</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category in categories %}
+                    <tr>
+                        <td>{{ category.id }}</td>
+                        <td>{{ category.name }}</td>
+                        <td>
+                            <div class="table-actions">
+                                <a class="btn btn-secondary" href="{{ url_for('admin.category_edit', category_id=category.id) }}">Править</a>
+                                {% if current_user.group_id == ADMIN_GROUP_ID %}
+                                <form class="js-confirm" method="POST" action="{{ url_for('admin.category_delete', category_id=category.id) }}" data-confirm="Удалить категорию {{ category.category_id }}?" data-confirm-btn="Удалить">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                    <button type="submit" class="btn btn-danger">Удалить</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>Категорий в системе пока нет.</p>
+    {% endif %}
+{% endblock %}

@@ -6,9 +6,24 @@ from flask_login import current_user, login_user, logout_user
 from app import db
 from app.admin import admin_bp
 from app.auth.decorators import admin_required
-from app.forms import CreateUserForm, UserEditForm
-from app.models import ADMIN_GROUP_ID, User
-from app.services import admin_create_user, admin_update_user, delete_user
+from app.forms import CategoryForm, CreateUserForm, ProductForm, UserEditForm, MarketplaceForm
+from app.models import ADMIN_GROUP_ID, Category, Product, User, Marketplace
+from app.services import (
+    create_category,
+    create_product,
+    create_user,
+    create_marketplace,
+    delete_category,
+    delete_product,
+    delete_user,
+    delete_marketplace,
+    get_categories,
+    get_marketplaces_list,
+    update_category,
+    update_product,
+    update_user,
+    update_marketplace,
+)
 
 
 @admin_bp.route("/users")
@@ -29,7 +44,7 @@ def user_create() -> Response | str:
     """Создание пользователя администратором.
 
     Особенности:
-        - создание выполняет сервис admin_create_user;
+        - создание выполняет сервис create_user;
         - ошибки уникальности логина/email показываются через flash.
 
     Возвращает:
@@ -38,15 +53,15 @@ def user_create() -> Response | str:
     form = CreateUserForm()
     if form.validate_on_submit():
         try:
-            admin_create_user(form)
+            create_user(form, group_id=form.group_id.data, active=form.active.data)
         except ValueError as error:
             flash(str(error), "error")
-            return render_template("user_create.html", form=form)
+            return render_template("user_form.html", form=form)
 
         flash(f"Пользователь {form.username.data} создан.", "success")
         return redirect(url_for("admin.users_list"))
 
-    return render_template("user_create.html", form=form)
+    return render_template("user_form.html", form=form)
 
 
 @admin_bp.route("/users/<int:user_id>/edit", methods=["GET", "POST"])
@@ -56,7 +71,7 @@ def user_edit(user_id: int) -> Response | str:
 
     Особенности:
         - форма предзаполняется данными пользователя;
-        - правку выполняет сервис admin_update_user, ошибки — через flash.
+        - правку выполняет сервис update_user, ошибки — через flash.
 
     Аргументы:
         user_id (int): идентификатор пользователя.
@@ -72,15 +87,15 @@ def user_edit(user_id: int) -> Response | str:
     form = UserEditForm(obj=user)
     if form.validate_on_submit():
         try:
-            admin_update_user(user.id, form)
+            update_user(user.id, form)
         except ValueError as error:
             flash(str(error), "error")
-            return render_template("user_edit.html", form=form, user=user)
+            return render_template("user_form.html", form=form, user=user)
 
         flash("Изменения сохранены.", "success")
         return redirect(url_for("admin.users_list"))
 
-    return render_template("user_edit.html", form=form, user=user)
+    return render_template("user_form.html", form=form, user=user)
 
 
 @admin_bp.route("/users/<int:user_id>/delete", methods=["POST"])
@@ -194,3 +209,294 @@ def impersonate_stop() -> Response:
     login_user(impersonator, remember=False)
     flash(f"Вы вернулись к учётной записи {impersonator.username}.", "success")
     return redirect(url_for("index"))
+
+
+@admin_bp.route("/products")
+@admin_required
+def products_list() -> str:
+    """Список всех товаров в системе.
+
+    Возвращает:
+        str: HTML страницы со списком товаров.
+    """
+    products: list[Product] = Product.query.order_by(Product.id).all()
+    return render_template("products.html", products=products)
+
+
+@admin_bp.route("/products/create", methods=["GET", "POST"])
+@admin_required
+def product_create() -> Response | str:
+    """Создание товара администратором.
+
+    Особенности:
+        - список категорий берётся из БД (пустая таблица сидится «Без категории»);
+        - создание выполняет сервис create_product, ошибки — через flash.
+
+    Возвращает:
+        Response | str: HTML формы создания или редирект на список.
+    """
+    form = ProductForm()
+    form.category_id.choices = [
+        (category.id, category.name) for category in get_categories()
+    ]
+
+    marketplaces = Marketplace.query.order_by(Marketplace.name).all()
+    form.marketplaces.choices = [(mp.id, mp.name) for mp in marketplaces]
+
+    if form.validate_on_submit():
+        try:
+            create_product(form)
+        except ValueError as error:
+            flash(str(error), "error")
+            return render_template("product_form.html", form=form)
+
+        flash(f"Товар {form.name.data} создан.", "success")
+        return redirect(url_for("admin.products_list"))
+
+    return render_template("product_form.html", form=form)
+
+
+@admin_bp.route("/products/<int:product_id>/edit", methods=["GET", "POST"])
+@admin_required
+def product_edit(product_id: int) -> Response | str:
+    """Редактирование товара.
+
+    Особенности:
+        - форма предзаполняется данными товара, marketplaces — списком;
+        - правку выполняет сервис update_product, ошибки — через flash.
+
+    Аргументы:
+        product_id (int): идентификатор товара.
+
+    Возвращает:
+        Response | str: HTML формы правки или редирект на список.
+    """
+    product: Product | None = db.session.get(Product, product_id)
+    marketplaces = Marketplace.query.order_by(Marketplace.name).all()
+
+    if product is None:
+        flash("Товар не найден.", "error")
+        return redirect(url_for("admin.products_list"))
+
+    form = ProductForm(obj=product)
+    form.marketplaces.data = [mp.id for mp in product.marketplaces]
+
+    form.category_id.choices = [
+        (category.id, category.name) for category in get_categories()
+    ]
+
+    form.marketplaces.choices = [(mp.id, mp.name) for mp in marketplaces]
+
+    if form.validate_on_submit():
+        try:
+            update_product(product.id, form)
+        except ValueError as error:
+            flash(str(error), "error")
+            return render_template("product_form.html", form=form, product=product)
+
+        flash("Изменения сохранены.", "success")
+        return redirect(url_for("admin.products_list"))
+
+    return render_template("product_form.html", form=form, product=product)
+
+
+@admin_bp.route("/products/<int:product_id>/delete", methods=["POST"])
+@admin_required
+def product_delete(product_id: int) -> Response:
+    """Удаление товара (только POST, подтверждение в браузере).
+
+    Особенности:
+        - удаление выполняет сервис delete_product, ошибки — через flash.
+
+    Аргументы:
+        product_id (int): идентификатор удаляемого товара.
+
+    Возвращает:
+        Response: редирект на список товаров.
+    """
+    try:
+        delete_product(product_id)
+    except (ValueError, LookupError) as error:
+        flash(str(error), "error")
+    else:
+        flash("Товар удалён.", "success")
+    return redirect(url_for("admin.products_list"))
+
+
+@admin_bp.route("/categories")
+@admin_required
+def categories_list() -> str:
+    """Список всех категорий товаров в системе.
+
+    Возвращает:
+        str: HTML страницы со списком категорий.
+    """
+    categories: list[Category] = Category.query.order_by(Category.id).all()
+    return render_template("categories.html", categories=categories)
+
+
+@admin_bp.route("/categories/create", methods=["GET", "POST"])
+@admin_required
+def category_create() -> Response | str:
+    """Создание категории администратором.
+
+    Особенности:
+        - создание выполняет сервис create_category, ошибки — через flash.
+
+    Возвращает:
+        Response | str: HTML формы создания или редирект на список категорий.
+    """
+    form = CategoryForm()
+    if form.validate_on_submit():
+        try:
+            create_category(form)
+        except ValueError as error:
+            flash(str(error), "error")
+            return render_template("category_form.html", form=form)
+
+        flash(f"Категория {form.name.data} создана.", "success")
+        return redirect(url_for("admin.categories_list"))
+
+    return render_template("category_form.html", form=form)
+
+
+@admin_bp.route("/categories/<int:category_id>/edit", methods=["GET", "POST"])
+@admin_required
+def category_edit(category_id: int) -> Response | str:
+    """Редактирование категории.
+
+    Особенности:
+        - форма предзаполняется данными категории;
+        - категорию по умолчанию переименовать нельзя (ошибка сервиса).
+
+    Аргументы:
+        category_id (int): идентификатор категории.
+
+    Возвращает:
+        Response | str: HTML формы правки или редирект на список.
+    """
+    category: Category | None = db.session.get(Category, category_id)
+    if category is None:
+        flash("Категория не найдена.", "error")
+        return redirect(url_for("admin.categories_list"))
+
+    form = CategoryForm(obj=category)
+    if form.validate_on_submit():
+        try:
+            update_category(category.id, form)
+        except ValueError as error:
+            flash(str(error), "error")
+            return render_template("category_form.html", form=form, category=category)
+
+        flash("Изменения сохранены.", "success")
+        return redirect(url_for("admin.categories_list"))
+
+    return render_template("category_form.html", form=form, category=category)
+
+
+@admin_bp.route("/categories/<int:category_id>/delete", methods=["POST"])
+@admin_required
+def category_delete(category_id: int) -> Response:
+    """Удаление категории (только POST, подтверждение в браузере).
+
+    Особенности:
+        - товары удаляемой категории переезжают в «Без категории»;
+        - категорию по умолчанию удалить нельзя (ошибка сервиса).
+
+    Аргументы:
+        category_id (int): идентификатор удаляемой категории.
+
+    Возвращает:
+        Response: редирект на список категорий.
+    """
+    try:
+        delete_category(category_id)
+    except (ValueError, LookupError) as error:
+        flash(str(error), "error")
+    else:
+        flash("Категория удалена.", "success")
+    return redirect(url_for("admin.categories_list"))
+
+
+@admin_bp.route("/marketplaces")
+@admin_required
+def marketplaces_list() -> str:
+    """Список всех маркетплейсов в системе.
+
+    Возвращает:
+        str: HTML страницы со списком маркетплейсов.
+    """
+    marketplaces: list[Marketplace] = Marketplace.query.order_by(Marketplace.id).all()
+    return render_template("marketplaces.html", marketplaces=marketplaces)
+
+@admin_bp.route("/marketplaces/create", methods=["GET", "POST"])
+@admin_required
+def marketplace_create() -> Response | str:
+    """Создание маркетплейса администратором.
+
+    Возвращает:
+        Response | str: HTML формы создания или редирект на список категорий.
+    """
+    form = MarketplaceForm()
+    if form.validate_on_submit():
+        try:
+            create_marketplace(form)
+        except ValueError as error:
+            flash(str(error), "error")
+            return render_template("marketplace_form.html", form=form)
+
+        flash(f"Категория {form.name.data} создана.", "success")
+        return redirect(url_for("admin.marketplaces_list"))
+
+    return render_template("marketplace_form.html", form=form)
+
+@admin_bp.route("/marketplaces/<int:marketplace_id>/edit", methods=["GET", "POST"])
+@admin_required
+def marketplace_edit(marketplace_id: int) -> Response | str:
+    """Редактирование марктеплейса.
+
+    Особенности:
+        - форма предзаполняется данными марктеплейса;
+
+    Аргументы:
+        marketplace_id (int): идентификатор марктеплейса.
+
+    Возвращает:
+        Response | str: HTML формы правки или редирект на марктеплейсов.
+    """
+    marketplace: Marketplace | None = db.session.get(Marketplace, marketplace_id)
+    if marketplace is None:
+        flash("Марктеплейс не найден.", "error")
+        return redirect(url_for("admin.marketplaces_list"))
+
+    form = MarketplaceForm(obj=marketplace)
+    if form.validate_on_submit():
+        try:
+            update_marketplace(marketplace.id, form)
+        except ValueError as error:
+            flash(str(error), "error")
+            return render_template("marketplace_form.html", form=form, marketplace=marketplace)
+
+        flash("Изменения сохранены.", "success")
+        return redirect(url_for("admin.marketplaces_list"))
+
+    return render_template("marketplace_form.html", form=form, marketplace=marketplace)
+
+@admin_bp.route("/marketplaces/<int:marketplace_id>/delete", methods=["POST"])
+@admin_required
+def marketplace_delete(marketplace_id: int) -> Response:
+    """Удаление марктеплейса (только POST, подтверждение в браузере).
+
+    Аргументы:
+        marketplace_id (int): идентификатор удаляемого марктеплейса.
+
+    Возвращает:
+        Response: редирект на список марктеплейсов.
+    """
+    try:
+        delete_marketplace(marketplace_id)
+    except (ValueError, LookupError) as error:
+        flash(str(error), "error")
+    else:
+        flash("Маркетплейс удален.", "success")
+    return redirect(url_for("admin.marketplaces_list"))

@@ -7,8 +7,13 @@ from wtforms import (
     SubmitField,
     BooleanField,
     SelectField,
+    SelectMultipleField,
+    TextAreaField,
+    DecimalField,
 )
-from wtforms.validators import DataRequired, Email, EqualTo, Length
+
+
+from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange
 
 from app.models import ADMIN_GROUP_ID, USER_GROUP_ID
 
@@ -17,6 +22,18 @@ GROUP_CHOICES: list[tuple[int, str]] = [
     (ADMIN_GROUP_ID, "Администратор"),
     (USER_GROUP_ID, "Пользователь"),
 ]
+
+CATEGORY_CHOICES: list[tuple[int, str]] = [
+    (1, "Мелкогаборит"),
+    (2, "Крупногабарит"),
+]
+
+# MARKETPLACE_CHOICES: list[tuple[int, str]] = [
+#         (1, "Озон"),
+#         (2, "Яндекс"),
+#         (2, "ВБ"),
+#     ]
+
 
 
 class RegisterForm(FlaskForm):
@@ -75,4 +92,33 @@ class UserEditForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired(), Email()])
     active = BooleanField("Учётная запись активна")
     group_id = SelectField("Группа", coerce=int, choices=GROUP_CHOICES)
+    submit = SubmitField("Сохранить")
+
+
+class ProductForm(FlaskForm):
+    """Создание и редактирование товара.
+
+    Особенности:
+        - варианты категорий задаются в маршруте (список зависит от БД).
+    """
+
+    name = StringField("Название", validators=[DataRequired(), Length(max=255)])
+    price = DecimalField("Цена", validators=[DataRequired(), NumberRange(min=0)], places=2)
+    category_id = SelectField("Категория", coerce=int, choices=CATEGORY_CHOICES)
+    marketplaces = SelectMultipleField("Маркетплейсы", coerce=int)
+    description = TextAreaField("Описание")
+    submit = SubmitField("Сохранить")
+
+class CategoryForm(FlaskForm):
+    """Создание и редактирование категории."""
+
+    name = StringField("Название", validators=[DataRequired(), Length(max=255)])
+    submit = SubmitField("Сохранить")
+
+class MarketplaceForm(FlaskForm):
+    """Создание и редактирование маркетплейса."""
+
+    name = StringField("Название", validators=[DataRequired(), Length(max=255)])
+    api_key = StringField("Api-ключ", validators=[DataRequired(), Length(max=255)])
+    description = TextAreaField("Описание")
     submit = SubmitField("Сохранить")

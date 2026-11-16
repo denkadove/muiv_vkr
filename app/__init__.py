@@ -60,4 +60,10 @@ def create_app() -> Flask:
 
     register_routes(app)
 
+    from app.modules.breadcrumbs.utils import build_breadcrumbs
+
+    @app.context_processor
+    def inject_breadcrumbs() -> dict:
+        return {"breadcrumbs": build_breadcrumbs()}
+
     return app

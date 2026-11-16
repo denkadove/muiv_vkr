@@ -9,6 +9,7 @@
                 <li>{{ product.id }} {{  product.name }} {{ product.marketplaces | map(attribute='name') | join(', ') }} {{ product.price }}</li>
             {% endfor %}
         </ul>
+        {% include 'structure/pagination.html' %}
     {% else %}
         <p>Пользователей в системе пока нет.</p>
         <p><a href="{{ url_for('auth.register') }}">Зарегистрируйтесь первым</a> — первый пользователь получит права администратора.</p>

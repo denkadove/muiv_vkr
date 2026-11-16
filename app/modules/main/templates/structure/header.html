@@ -10,12 +10,24 @@
                 {% if current_user.is_authenticated %}
                     <li>Привет, <a href="{{ url_for('profile') }}" >{{ current_user.username }}</a></li>
                     {% if current_user.group_id == ADMIN_GROUP_ID %}
-                    <li><a href="{{ url_for('admin.users_list') }}">Админ-панель</a></li>
+                    <li><a class="btn btn-primary btn-sm btn-icon-text" href="{{ url_for('admin.users_list') }}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        Админ-панель
+                    </a></li>
                     {% endif %}
-                    <li><a href="{{ url_for('auth.logout') }}" > Выйти </a></li>
+                    <li><a class="btn btn-danger btn-sm btn-icon-text" href="{{ url_for('auth.logout') }}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Выйти
+                    </a></li>
                 {% else %}
-                    <li><a href="{{ url_for('auth.login') }}" > Войти </a></li>
-                    <li><a href="{{ url_for('auth.register') }}" > Регистрация </a></li>
+                    <li><a class="btn btn-primary btn-sm btn-icon-text" href="{{ url_for('auth.login') }}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                        Войти
+                    </a></li>
+                    <li><a class="btn btn-primary btn-sm btn-icon-text" href="{{ url_for('auth.register') }}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                        Регистрация
+                    </a></li>
                 {% endif %}
             </ul>
         </nav>

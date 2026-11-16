@@ -1,7 +1,7 @@
 {% extends "structure/admin_base.html" %}
-{% block title %}Создание пользователя — {{ config.APP_NAME }}{% endblock %}
+{% block title %}{{ 'Редактирование' if user else 'Создание' }} пользователя — {{ config.APP_NAME }}{% endblock %}
 {% block admin_content %}
-    <h2>Создание пользователя</h2>
+    <h2>{{ 'Редактирование' if user else 'Создание' }} пользователя</h2>
 
     <form method="POST">
         {{ form.hidden_tag() }}

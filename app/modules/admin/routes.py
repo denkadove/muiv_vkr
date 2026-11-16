@@ -37,8 +37,9 @@ from app.modules.auth.services import (
 @admin_bp.route("/users")
 @admin_required
 def users_list() -> str:
-    users: list[User] = User.query.order_by(User.id).all()
-    return render_template("users.html", users=users)
+    page = request.args.get("page", 1, type=int)
+    pagination = User.query.order_by(User.id).paginate(page=page, per_page=20, error_out=False)
+    return render_template("users.html", users=pagination.items, pagination=pagination)
 
 
 @admin_bp.route("/users/create", methods=["GET", "POST"])
@@ -154,8 +155,9 @@ def impersonate_stop() -> Response:
 @admin_bp.route("/products")
 @admin_required
 def products_list() -> str:
-    products: list[Product] = Product.query.order_by(Product.id).all()
-    return render_template("products.html", products=products)
+    page = request.args.get("page", 1, type=int)
+    pagination = Product.query.order_by(Product.id).paginate(page=page, per_page=20, error_out=False)
+    return render_template("products.html", products=pagination.items, pagination=pagination)
 
 
 @admin_bp.route("/products/create", methods=["GET", "POST"])
@@ -230,8 +232,9 @@ def product_delete(product_id: int) -> Response:
 @admin_bp.route("/categories")
 @admin_required
 def categories_list() -> str:
-    categories: list[Category] = Category.query.order_by(Category.id).all()
-    return render_template("categories.html", categories=categories)
+    page = request.args.get("page", 1, type=int)
+    pagination = Category.query.order_by(Category.id).paginate(page=page, per_page=20, error_out=False)
+    return render_template("categories.html", categories=pagination.items, pagination=pagination)
 
 
 @admin_bp.route("/categories/create", methods=["GET", "POST"])
@@ -288,8 +291,9 @@ def category_delete(category_id: int) -> Response:
 @admin_bp.route("/marketplaces")
 @admin_required
 def marketplaces_list() -> str:
-    marketplaces: list[Marketplace] = Marketplace.query.order_by(Marketplace.id).all()
-    return render_template("marketplaces.html", marketplaces=marketplaces)
+    page = request.args.get("page", 1, type=int)
+    pagination = Marketplace.query.order_by(Marketplace.id).paginate(page=page, per_page=20, error_out=False)
+    return render_template("marketplaces.html", marketplaces=pagination.items, pagination=pagination)
 
 
 @admin_bp.route("/marketplaces/create", methods=["GET", "POST"])
@@ -346,8 +350,10 @@ def marketplace_delete(marketplace_id: int) -> Response:
 @admin_bp.route("/groups")
 @admin_required
 def groups_list() -> str:
-    groups: list[UserGroup] = get_user_groups()
-    return render_template("groups.html", groups=groups)
+    get_user_groups()  # ensure defaults seeded
+    page = request.args.get("page", 1, type=int)
+    pagination = UserGroup.query.order_by(UserGroup.id).paginate(page=page, per_page=20, error_out=False)
+    return render_template("groups.html", groups=pagination.items, pagination=pagination)
 
 
 @admin_bp.route("/groups/create", methods=["GET", "POST"])

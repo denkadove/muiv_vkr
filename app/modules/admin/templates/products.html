@@ -1,5 +1,6 @@
 {% extends "structure/admin_base.html" %}
-{% block title %}Товары — {{ config.APP_NAME }}{% endblock %}
+{% block title %}Товары — {{ config.APP_NAME }}
+{% endblock %}
 {% block admin_content %}
     <div class="page-header">
         <h2>Товары</h2>
@@ -48,4 +49,5 @@
     {% else %}
         <p>Товаров в системе пока нет.</p>
     {% endif %}
+{% include 'structure/pagination.html' %}
 {% endblock %}

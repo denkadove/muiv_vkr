@@ -1,5 +1,6 @@
 {% extends "structure/admin_base.html" %}
-{% block title %}Маркетплейсы — {{ config.APP_NAME }}{% endblock %}
+{% block title %}Маркетплейсы — {{ config.APP_NAME }}
+{% endblock %}
 {% block admin_content %}
     <div class="page-header">
         <h2>Маркетплейсы</h2>
@@ -42,4 +43,5 @@
     {% else %}
         <p>Маркетплейсов в системе пока нет.</p>
     {% endif %}
+{% include 'structure/pagination.html' %}
 {% endblock %}

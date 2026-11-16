@@ -111,6 +111,16 @@ p {
     background: var(--color-accent-soft);
 }
 
+/* Кнопки в шапке: светлый текст на цветном фоне */
+.site-nav .btn-primary,
+.site-nav .btn-danger {
+    color: #ffffff;
+}
+
+.site-nav .btn-secondary {
+    color: var(--color-accent);
+}
+
 /* 5. Flash-сообщения: цветная полоса слева различает тип */
 .alert {
     margin: 8px 12px 0;
@@ -160,6 +170,71 @@ p {
     max-width: 100%;
     margin: 0 auto;
     padding: 8px 12px;
+}
+
+/* Хлебные крошки */
+.breadcrumbs {
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.breadcrumbs a {
+    color: var(--color-accent);
+    text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb-sep {
+    margin: 0 4px;
+    color: var(--color-muted);
+}
+
+/* Пагинация */
+.pagination {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    margin: 12px 0;
+    flex-wrap: wrap;
+}
+
+.page-link {
+    display: inline-block;
+    padding: 4px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: var(--color-text);
+    background: var(--color-surface);
+    font-size: 0.85rem;
+}
+
+.page-link:hover {
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+}
+
+.page-link.active {
+    background: var(--color-accent);
+    color: #ffffff;
+    border-color: var(--color-accent);
+}
+
+.page-link.disabled {
+    color: var(--color-muted);
+    cursor: default;
+    background: var(--color-bg);
+}
+
+.page-ellipsis {
+    padding: 4px 6px;
+    color: var(--color-muted);
 }
 
 /* 6.1 Сайдбар навигации админ-панели: на мобильных над контентом,
@@ -438,6 +513,17 @@ form {
     justify-content: center;
     padding: 4px;
     line-height: 1;
+}
+
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+}
+
+.btn-icon-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .table-actions {

@@ -16,6 +16,19 @@
     </head>
 {% block header %}{% include 'structure/header.html' %}{% endblock %}
 
+{% if breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Хлебные крошки">
+    {% for crumb in breadcrumbs %}
+        {% if crumb.url %}
+            <a href="{{ crumb.url }}">{{ crumb.name }}</a>
+        {% else %}
+            <span>{{ crumb.name }}</span>
+        {% endif %}
+        {% if not loop.last %} <span class="breadcrumb-sep">›</span> {% endif %}
+    {% endfor %}
+</nav>
+{% endif %}
+
 <main class="{% block main_class %}site-main{% endblock %}">
 {% block content %}
 {% endblock %}

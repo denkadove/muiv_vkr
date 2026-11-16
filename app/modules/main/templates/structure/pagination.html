@@ -1,0 +1,29 @@
+{% if pagination and pagination.pages > 1 %}
+{% set _args = request.args.to_dict() %}
+{% set _ = _args.pop('page', None) %}
+<nav class="pagination" aria-label="Пагинация">
+    {% if pagination.has_prev %}
+        <a class="page-link" href="{{ url_for(request.endpoint, page=pagination.prev_num, **_args) }}">‹</a>
+    {% else %}
+        <span class="page-link disabled">‹</span>
+    {% endif %}
+
+    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if p %}
+            {% if p == pagination.page %}
+                <span class="page-link active">{{ p }}</span>
+            {% else %}
+                <a class="page-link" href="{{ url_for(request.endpoint, page=p, **_args) }}">{{ p }}</a>
+            {% endif %}
+        {% else %}
+            <span class="page-ellipsis">…</span>
+        {% endif %}
+    {% endfor %}
+
+    {% if pagination.has_next %}
+        <a class="page-link" href="{{ url_for(request.endpoint, page=pagination.next_num, **_args) }}">›</a>
+    {% else %}
+        <span class="page-link disabled">›</span>
+    {% endif %}
+</nav>
+{% endif %}

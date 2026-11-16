@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 .env
 instance/
-migrations/
 .idea/
 
+/migrations/alembic.ini
+/migrations/env.py
+/migrations/README
+/migrations/script.py.mako

@@ -1,0 +1,45 @@
+{# Сайдбар админ-панели: разделы-выпадашки без JS, текущий пункт подсвечен #}
+<nav class="admin-sidebar" aria-label="Навигация админ-панели">
+    <details class="admin-menu-section" open>
+        <summary class="admin-menu-title">Основное</summary>
+        <ul class="admin-menu-list">
+            {% set users_endpoints = ('admin.users_list', 'admin.user_create', 'admin.user_edit') %}
+            {% set groups_endpoints = ('admin.groups_list', 'admin.group_create', 'admin.group_edit') %}
+            {% set users_active = request.endpoint in users_endpoints %}
+            {% set groups_active = request.endpoint in groups_endpoints %}
+            <li>
+                <a class="admin-menu-link{{ ' is-active' if users_active else '' }}" {% if users_active %}aria-current="page"{% endif %} href="{{ url_for('admin.users_list') }}">Пользователи</a>
+            </li>
+            <li>
+                <a class="admin-menu-link{{ ' is-active' if groups_active else '' }}" {% if groups_active %}aria-current="page"{% endif %} href="{{ url_for('admin.groups_list') }}">Группы</a>
+            </li>
+            <li>
+                <a class="admin-menu-link"  href="#">Настройки</a>
+            </li>
+        </ul>
+    </details>
+    <details class="admin-menu-section" open>
+        <summary class="admin-menu-title">Маркетплейсы</summary>
+        <ul class="admin-menu-list">
+            {% set products_endpoints = ('admin.products_list', 'admin.product_create', 'admin.product_edit') %}
+            {% set categories_endpoints = ('admin.categories_list', 'admin.category_create', 'admin.category_edit') %}
+            {% set marketplaces_endpoints = ('admin.marketplaces_list', 'admin.marketplaces_create', 'admin.marketplaces_edit') %}
+            {% set products_active = request.endpoint in products_endpoints %}
+            {% set categories_active = request.endpoint in categories_endpoints %}
+            {% set marketplaces_active = request.endpoint in marketplaces_endpoints %}
+            <li>
+                <a class="admin-menu-link{{ ' is-active' if products_active else '' }}" {% if products_active %}aria-current="page"{% endif %} href="{{ url_for('admin.products_list') }}">Товары</a>
+            </li>
+            <li>
+                <a class="admin-menu-link{{ ' is-active' if categories_active else '' }}" {% if categories_active %}aria-current="page"{% endif %} href="{{ url_for('admin.categories_list') }}">Категории</a>
+            </li>
+            <li>
+                <a class="admin-menu-link"  href="#">Отчеты</a>
+            </li>
+            <li>
+                <a class="admin-menu-link{{ ' is-active' if marketplaces_active else '' }}" {% if marketplaces_active %}aria-current="page"{% endif %} href="{{ url_for('admin.marketplaces_list') }}">Настройки</a>
+            </li>
+
+        </ul>
+    </details>
+</nav>

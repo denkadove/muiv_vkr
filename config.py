@@ -16,19 +16,4 @@ class Config:
     # TODO: временный dev-ключ — в эксплуатации задавать переменной окружения
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-key-change-before-production"
 
-    # Группа 1 — администратор, группа 2 — обычный пользователь
-    ADMIN_GROUP_ID: int = 1
-    USER_GROUP_ID: int = 2
-
-    # Категория по умолчанию: сидится при первом запросе категорий, защищена от удаления
-    DEFAULT_CATEGORY_NAME: str = "Без категории"
-
-    GROUP_CHOICES: list[tuple[int, str]] = [
-        (ADMIN_GROUP_ID, "Администратор"),
-        (USER_GROUP_ID, "Пользователь"),
-    ]
-
-    CATEGORY_CHOICES: list[tuple[int, str]] = [
-        (1, "Мелкогаборит"),
-        (2, "Крупногабарит"),
-    ]
+    # Константы перенесены в app/modules/settings/constants.py

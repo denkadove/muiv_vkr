@@ -25,8 +25,8 @@
 body {
     margin: 0;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    font-size: 16px;
-    line-height: 1.5;
+    font-size: 14px;
+    line-height: 1.4;
     color: var(--color-text);
     background: var(--color-bg);
     min-height: 100vh;
@@ -36,15 +36,15 @@ body {
 
 /* 3. Типографика: clamp() плавно масштабирует заголовки */
 h1 {
-    font-size: 1.5rem; /* fallback для старых браузеров */
-    font-size: clamp(1.4rem, 2vw + 1rem, 1.8rem);
-    margin: 0 0 14px;
+    font-size: 1.25rem;
+    font-size: clamp(1.15rem, 1.5vw + 0.8rem, 1.5rem);
+    margin: 0 0 8px;
 }
 
 h2 {
-    font-size: 1.25rem;
-    font-size: clamp(1.15rem, 1.5vw + 1rem, 1.45rem);
-    margin: 0 0 10px;
+    font-size: 1.1rem;
+    font-size: clamp(1.05rem, 1.2vw + 0.8rem, 1.3rem);
+    margin: 0;
 }
 
 p {
@@ -113,8 +113,8 @@ p {
 
 /* 5. Flash-сообщения: цветная полоса слева различает тип */
 .alert {
-    margin: 10px 16px 0;
-    padding: 10px 14px;
+    margin: 8px 12px 0;
+    padding: 8px 12px;
     border-left: 4px solid;
     border-radius: var(--radius);
     font-size: 0.95rem;
@@ -157,9 +157,9 @@ p {
 .site-main {
     flex: 1;
     width: 100%;
-    max-width: 960px;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 16px;
+    padding: 8px 12px;
 }
 
 /* 6.1 Сайдбар навигации админ-панели: на мобильных над контентом,
@@ -250,7 +250,7 @@ p {
 
 /* Широкий контейнер админки: сайдбару нужно место */
 .site-main--admin {
-    max-width: 1200px;
+    max-width: 100%;
 }
 
 @media (min-width: 960px) {
@@ -260,10 +260,10 @@ p {
     }
 
     .admin-sidebar {
-        width: 240px;
+        width: 180px;
         flex-shrink: 0;
         position: sticky;
-        top: 16px;
+        top: 8px;
     }
 
     .admin-content {
@@ -274,6 +274,30 @@ p {
 /* 7. Формы */
 form {
     max-width: 480px;
+}
+
+/* 7.1 Карточка форм авторизации */
+.auth-card {
+    max-width: 420px;
+    margin: 24px auto;
+    padding: 24px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 16px rgba(26, 35, 51, 0.08);
+}
+
+.auth-card h1 {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.auth-form .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.auth-form .btn-primary {
+    width: 100%;
 }
 
 .form-group {
@@ -289,7 +313,7 @@ form {
 
 .form-control {
     width: 100%;
-    padding: 10px 12px;
+    padding: 6px 8px;
     font: inherit;
     color: var(--color-text);
     background: var(--color-surface);
@@ -334,8 +358,9 @@ form {
 /* 8. Кнопки */
 .btn {
     display: inline-block;
-    padding: 10px 18px;
+    padding: 5px 10px;
     font: inherit;
+    font-size: 0.85rem;
     cursor: pointer;
     text-decoration: none;
     border: none;
@@ -381,12 +406,12 @@ form {
 .data-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
 }
 
 .data-table th,
 .data-table td {
-    padding: 8px 12px;
+    padding: 4px 8px;
     text-align: left;
     border-bottom: 1px solid var(--color-border);
 }
@@ -402,14 +427,48 @@ form {
 
 /* Компактные кнопки в ячейках таблицы */
 .data-table .btn {
-    padding: 6px 10px;
-    font-size: 0.85rem;
+    padding: 3px 8px;
+    font-size: 0.75rem;
+}
+
+/* Кнопка-иконка */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    line-height: 1;
 }
 
 .table-actions {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     align-items: center;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+/* Колонка действий: компактная, прижата к правому краю */
+.data-table th:last-child,
+.data-table td:last-child {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+/* Заголовок страницы с кнопками на одной строке */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.page-header h2 {
+    margin: 0;
 }
 
 /* 9. Футер */
@@ -471,19 +530,19 @@ form {
 /* 10. Планшет и выше */
 @media (min-width: 640px) {
     .site-header-inner {
-        padding: 12px 24px;
+        padding: 8px 16px;
     }
 
     .site-logo {
-        font-size: 1rem;
+        font-size: 0.95rem;
     }
 
     .site-main {
-        padding: 24px;
+        padding: 12px 16px;
     }
 
     .alert {
-        margin: 12px 24px 0;
+        margin: 8px 16px 0;
     }
 }
 

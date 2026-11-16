@@ -1,0 +1,38 @@
+"""Формы аутентификации."""
+
+from flask_wtf import FlaskForm
+from wtforms import BooleanField, PasswordField, StringField, SubmitField
+from wtforms.validators import DataRequired, Email, EqualTo, Length
+
+from app.modules.settings.constants import GROUP_CHOICES
+
+
+class RegisterForm(FlaskForm):
+    """Регистрация: логин, email, пароли, согласие на обработку данных."""
+
+    username = StringField("Логин", validators=[DataRequired(), Length(min=3, max=255)])
+    email = StringField("Email", validators=[DataRequired(), Email()])
+    password = PasswordField("Пароль", validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField(
+        "Подтверждение пароля",
+        validators=[
+            DataRequired(),
+            EqualTo("password", message="Пароли должны совпадать"),
+        ],
+    )
+
+    agree_personal_data = BooleanField(
+        "Согласие на обработку персональных данных",
+        validators=[DataRequired(message="Необходимо согласие на обработку персональных данных")],
+    )
+
+    submit = SubmitField("Регистрация")
+
+
+class LoginForm(FlaskForm):
+    """Вход в систему: логин и пароль."""
+
+    username = StringField("Логин", validators=[DataRequired()])
+    password = PasswordField("Пароль", validators=[DataRequired()])
+    remember_me = BooleanField("Запомнить меня")
+    submit = SubmitField("Войти")

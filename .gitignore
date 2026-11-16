@@ -4,7 +4,7 @@ __pycache__/
 .env
 instance/
 .idea/
-
+migrations/
 /migrations/alembic.ini
 /migrations/env.py
 /migrations/README

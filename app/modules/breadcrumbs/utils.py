@@ -8,6 +8,7 @@ SECTION_NAMES = {
     "products": "Товары",
     "categories": "Категории",
     "marketplaces": "Маркетплейсы",
+    "primitives": "Примитивы",
 }
 
 SINGULAR_NAMES = {
@@ -16,6 +17,7 @@ SINGULAR_NAMES = {
     "products": "товара",
     "categories": "категории",
     "marketplaces": "маркетплейса",
+    "primitives": "примитива",
 }
 
 
@@ -41,6 +43,10 @@ def _get_object_name(section: str, obj_id: int) -> str:
         if section == "marketplaces":
             from app.modules.catalog.models import Marketplace
             obj = Marketplace.query.get(obj_id)
+            return obj.name if obj else f"#{obj_id}"
+        if section == "primitives":
+            from app.modules.catalog.models import Primitive
+            obj = Primitive.query.get(obj_id)
             return obj.name if obj else f"#{obj_id}"
     except Exception:
         pass

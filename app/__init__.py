@@ -29,6 +29,8 @@ def create_app() -> Flask:
     from app.modules.settings import settings_bp
 
     login_manager.login_view = "auth.login"
+    login_manager.login_message = "Войдите, чтобы получить доступ к этой странице."
+    login_manager.login_message_category = "error"
 
     from app.modules.settings.constants import ADMIN_GROUP_ID
     from app.modules.auth.models import User

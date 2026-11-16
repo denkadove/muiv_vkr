@@ -15,9 +15,9 @@
                         <th>ID</th>
                         <th>Название</th>
                         <th>Цена</th>
+                        <th>Остаток</th>
                         <th>Категория</th>
                         <th>Магазин</th>
-                        <th>Создан</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
@@ -27,9 +27,9 @@
                         <td>{{ product.id }}</td>
                         <td>{{ product.name }}</td>
                         <td>{{ product.price }}</td>
+                        <td>{{ product.stock }}</td>
                         <td>{{ product.category.name if product.category else 'Нет' }}</td>
                         <td>{{ product.marketplaces | map(attribute='name') | join(', ') }}</td>
-                        <td>{{ product.created.strftime('%d.%m.%Y %H:%M') }}</td>
                         <td>
                             <div class="table-actions">
                                 <a class="btn btn-secondary btn-icon" title="Править" aria-label="Править" href="{{ url_for('admin.product_edit', product_id=product.id) }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></a>

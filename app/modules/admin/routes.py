@@ -9,18 +9,22 @@ from app.modules.admin.forms import CreateUserForm, UserForm, UserGroupForm
 from app.modules.auth.decorators import admin_required
 from app.modules.settings.constants import ADMIN_GROUP_ID
 from app.modules.auth.models import User, UserGroup
-from app.modules.catalog.forms import CategoryForm, MarketplaceForm, ProductForm
-from app.modules.catalog.models import Category, Marketplace, Product
+from app.modules.catalog.forms import CategoryForm, MarketplaceForm, PrimitiveForm, ProductForm
+from app.modules.catalog.models import Category, Marketplace, Primitive, Product, product_primitives
 from app.modules.catalog.services import (
     create_category,
     create_marketplace,
+    create_primitive,
     create_product,
     delete_category,
     delete_marketplace,
+    delete_primitive,
     delete_product,
     get_categories,
+    get_primitives,
     update_category,
     update_marketplace,
+    update_primitive,
     update_product,
 )
 from app.modules.auth.services import (
@@ -169,6 +173,10 @@ def product_create() -> Response | str:
     marketplaces = Marketplace.query.order_by(Marketplace.name).all()
     form.marketplaces.choices = [(mp.id, mp.name) for mp in marketplaces]
 
+    primitives = get_primitives()
+    for line in form.composition:
+        line.primitive_id.choices = [(p.id, f"{p.sku} — {p.name}") for p in primitives]
+
     if form.validate_on_submit():
         try:
             create_product(form)
@@ -195,6 +203,20 @@ def product_edit(product_id: int) -> Response | str:
     form = ProductForm(obj=product)
     if request.method == "GET":
         form.marketplaces.data = [mp.id for mp in product.marketplaces]
+        while len(form.composition.entries) > 0:
+            form.composition.pop_entry()
+        for p in product.primitives:
+            assoc = db.session.execute(
+                product_primitives.select().where(
+                    product_primitives.c.product_id == product.id,
+                    product_primitives.c.primitive_id == p.id,
+                )
+            ).first()
+            entry = form.composition.append_entry()
+            entry.primitive_id.data = p.id
+            entry.quantity.data = assoc.quantity if assoc else 1
+        if not product.primitives:
+            form.composition.append_entry()
 
     form.category_id.choices = [
         (category.id, category.name) for category in get_categories()
@@ -203,6 +225,10 @@ def product_edit(product_id: int) -> Response | str:
     form.marketplaces.choices = [
         (m.id, m.name) for m in Marketplace.query.all()
     ]
+
+    primitives = get_primitives()
+    for line in form.composition:
+        line.primitive_id.choices = [(p.id, f"{p.sku} — {p.name}") for p in primitives]
 
     if form.validate_on_submit():
         try:
@@ -345,6 +371,61 @@ def marketplace_delete(marketplace_id: int) -> Response:
     else:
         flash("Маркетплейс удален.", "success")
     return redirect(url_for("admin.marketplaces_list"))
+
+
+@admin_bp.route("/primitives")
+@admin_required
+def primitives_list() -> str:
+    page = request.args.get("page", 1, type=int)
+    pagination = Primitive.query.order_by(Primitive.id).paginate(page=page, per_page=20, error_out=False)
+    return render_template("primitives.html", primitives=pagination.items, pagination=pagination)
+
+
+@admin_bp.route("/primitives/create", methods=["GET", "POST"])
+@admin_required
+def primitive_create() -> Response | str:
+    form = PrimitiveForm()
+    if form.validate_on_submit():
+        try:
+            create_primitive(form)
+        except ValueError as error:
+            flash(str(error), "error")
+            return render_template("primitive_form.html", form=form)
+        flash(f"Примитив {form.name.data} создан.", "success")
+        return redirect(url_for("admin.primitives_list"))
+    return render_template("primitive_form.html", form=form)
+
+
+@admin_bp.route("/primitives/<int:primitive_id>/edit", methods=["GET", "POST"])
+@admin_required
+def primitive_edit(primitive_id: int) -> Response | str:
+    primitive: Primitive | None = db.session.get(Primitive, primitive_id)
+    if primitive is None:
+        flash("Примитив не найден.", "error")
+        return redirect(url_for("admin.primitives_list"))
+
+    form = PrimitiveForm(obj=primitive)
+    if form.validate_on_submit():
+        try:
+            update_primitive(primitive.id, form)
+        except ValueError as error:
+            flash(str(error), "error")
+            return render_template("primitive_form.html", form=form, primitive=primitive)
+        flash("Изменения сохранены.", "success")
+        return redirect(url_for("admin.primitives_list"))
+    return render_template("primitive_form.html", form=form, primitive=primitive)
+
+
+@admin_bp.route("/primitives/<int:primitive_id>/delete", methods=["POST"])
+@admin_required
+def primitive_delete(primitive_id: int) -> Response:
+    try:
+        delete_primitive(primitive_id)
+    except (ValueError, LookupError) as error:
+        flash(str(error), "error")
+    else:
+        flash("Примитив удалён.", "success")
+    return redirect(url_for("admin.primitives_list"))
 
 
 @admin_bp.route("/groups")

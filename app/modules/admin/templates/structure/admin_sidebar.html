@@ -34,6 +34,9 @@
                 <a class="admin-menu-link{{ ' is-active' if categories_active else '' }}" {% if categories_active %}aria-current="page"{% endif %} href="{{ url_for('admin.categories_list') }}">Категории</a>
             </li>
             <li>
+                <a class="admin-menu-link{{ ' is-active' if request.endpoint in ('admin.primitives_list','admin.primitive_create','admin.primitive_edit') else '' }}" href="{{ url_for('admin.primitives_list') }}">Примитивы</a>
+            </li>
+            <li>
                 <a class="admin-menu-link"  href="#">Отчеты</a>
             </li>
             <li>

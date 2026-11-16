@@ -8,7 +8,9 @@ from app.modules.settings.constants import DEFAULT_CATEGORY_NAME
 from app.modules.catalog.models import (
     Category,
     Marketplace,
+    Primitive,
     Product,
+    product_primitives,
 )
 
 
@@ -92,14 +94,37 @@ def create_product(form: ProductForm) -> Product:
         Marketplace.id.in_(form.marketplaces.data or [])
     ).all()
 
+    composition = getattr(form, "composition", None)
+    lines = composition.data if composition is not None else []
+    if not lines:
+        raise ValueError("Товар должен состоять хотя бы из одного примитива.")
+
     product = Product(
         name=form.name.data,
-        price=form.price.data,
         marketplaces=marketplaces,
         description=form.description.data,
         category_id=category.id,
     )
     db.session.add(product)
+    db.session.flush()
+
+    for line in lines:
+        primitive_id = line.get("primitive_id") if isinstance(line, dict) else getattr(line, "primitive_id", None)
+        quantity = line.get("quantity") if isinstance(line, dict) else getattr(line, "quantity", None)
+        if not primitive_id:
+            continue
+        primitive = db.session.get(Primitive, int(primitive_id))
+        if primitive is None:
+            raise ValueError("Указан несуществующий примитив.")
+        qty = int(quantity or 1)
+        if qty < 1:
+            raise ValueError("Количество примитива должно быть не меньше 1.")
+        db.session.execute(
+            product_primitives.insert().values(
+                product_id=product.id, primitive_id=primitive.id, quantity=qty
+            )
+        )
+
     db.session.commit()
     return product
 
@@ -119,21 +144,46 @@ def update_product(product_id: int, form: ProductForm) -> Product:
 
     product.marketplaces = marketplaces
     product.name = form.name.data
-    product.price = form.price.data
     product.description = form.description.data
     product.category_id = category.id
+
+    # Обновляем состав
+    db.session.execute(
+        product_primitives.delete().where(product_primitives.c.product_id == product.id)
+    )
+    composition = getattr(form, "composition", None)
+    lines = composition.data if composition is not None else []
+    if not lines:
+        raise ValueError("Товар должен состоять хотя бы из одного примитива.")
+    for line in lines:
+        primitive_id = line.get("primitive_id") if isinstance(line, dict) else getattr(line, "primitive_id", None)
+        quantity = line.get("quantity") if isinstance(line, dict) else getattr(line, "quantity", None)
+        if not primitive_id:
+            continue
+        primitive = db.session.get(Primitive, int(primitive_id))
+        if primitive is None:
+            raise ValueError("Указан несуществующий примитив.")
+        qty = int(quantity or 1)
+        if qty < 1:
+            raise ValueError("Количество примитива должно быть не меньше 1.")
+        db.session.execute(
+            product_primitives.insert().values(
+                product_id=product.id, primitive_id=primitive.id, quantity=qty
+            )
+        )
 
     db.session.commit()
     return product
 
 
 def delete_product(product_id: int) -> None:
-    """Удаляет товар."""
+    """Удаляет товар и очищает неиспользуемые примитивы."""
     product: Product | None = db.session.get(Product, product_id)
     if product is None:
         raise LookupError("Товар не найден.")
     db.session.delete(product)
     db.session.commit()
+    cleanup_unused_primitives()
 
 
 def create_marketplace(form: MarketplaceForm) -> Marketplace:
@@ -176,4 +226,72 @@ def delete_marketplace(marketplace_id: int) -> None:
         raise LookupError("Маркетплейс не найден.")
 
     db.session.delete(marketplace)
+    db.session.commit()
+
+
+def get_primitives() -> list[Primitive]:
+    """Возвращает список примитивов."""
+    return Primitive.query.order_by(Primitive.id).all()
+
+
+def create_primitive(form) -> Primitive:
+    """Создаёт примитив."""
+    if Primitive.query.filter_by(sku=form.sku.data).first() is not None:
+        raise ValueError("Примитив с таким артикулом уже существует.")
+
+    primitive = Primitive(
+        sku=form.sku.data,
+        name=form.name.data,
+        price=form.price.data,
+        stock=form.stock.data,
+    )
+    db.session.add(primitive)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise ValueError("Примитив с таким артикулом уже существует.")
+    return primitive
+
+
+def update_primitive(primitive_id: int, form) -> Primitive:
+    """Обновляет примитив."""
+    primitive: Primitive | None = db.session.get(Primitive, primitive_id)
+    if primitive is None:
+        raise LookupError("Примитив не найден.")
+
+    if Primitive.query.filter(Primitive.sku == form.sku.data, Primitive.id != primitive_id).first() is not None:
+        raise ValueError("Примитив с таким артикулом уже существует.")
+
+    primitive.sku = form.sku.data
+    primitive.name = form.name.data
+    primitive.price = form.price.data
+    primitive.stock = form.stock.data
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise ValueError("Примитив с таким артикулом уже существует.")
+    return primitive
+
+
+def delete_primitive(primitive_id: int) -> None:
+    """Удаляет примитив, если он не используется в товарах."""
+    primitive: Primitive | None = db.session.get(Primitive, primitive_id)
+    if primitive is None:
+        raise LookupError("Примитив не найден.")
+
+    used_in = Product.query.filter(Product.primitives.any(id=primitive_id)).first()
+    if used_in is not None:
+        raise ValueError("Нельзя удалить примитив, используемый в товарах.")
+
+    db.session.delete(primitive)
+    db.session.commit()
+
+
+def cleanup_unused_primitives() -> None:
+    """Удаляет примитивы, не используемые ни в одном товаре."""
+    unused = Primitive.query.filter(~Primitive.products.any()).all()
+    for p in unused:
+        db.session.delete(p)
     db.session.commit()

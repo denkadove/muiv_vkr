@@ -526,6 +526,21 @@ form {
     gap: 6px;
 }
 
+.composition-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.composition-row .form-control {
+    flex: 1;
+}
+
+.composition-row .btn {
+    flex-shrink: 0;
+}
+
 .table-actions {
     display: flex;
     gap: 4px;

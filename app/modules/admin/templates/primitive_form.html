@@ -22,11 +22,6 @@
         </div>
 
         <div class="form-group">
-            {{ form.stock.label(class="form-label") }} {{ form.stock(class="form-control") }}
-            {% if form.stock.errors %}<div class="error">{% for e in form.stock.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
-        </div>
-
-        <div class="form-group">
             {{ form.submit(class="btn btn-primary") }}
         </div>
     </form>

@@ -9,9 +9,14 @@
                 <button type="submit" class="btn btn-secondary">Загрузить из фида</button>
             </form>
             <a class="btn btn-primary" href="{{ url_for('admin.primitive_create') }}">Создать примитив</a>
-            <a class="btn btn-secondary" href="{{ url_for('settings.settings_edit') }}">Настройки</a>
         </div>
     </div>
+
+    <form method="GET" class="filter-form">
+        <input type="text" name="q" value="{{ q or '' }}" placeholder="SKU или название" class="form-control search-input" />
+        <label><input type="checkbox" name="no_stock" value="1" {% if no_stock == '1' %}checked{% endif %} /> Без остатка</label>
+        <button type="submit" class="btn btn-secondary btn-sm">Найти</button>
+    </form>
 
     {% if primitives %}
         <div class="table-wrap">
@@ -22,7 +27,11 @@
                         <th>Артикул</th>
                         <th>Название</th>
                         <th>Цена</th>
-                        <th>Остаток</th>
+                        <th>СПБ ТП</th>
+                        <th>МСК</th>
+                        <th>СПБ ОША</th>
+                        <th>СПБ СВХ</th>
+                        <th>СПБ БШО</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
@@ -31,9 +40,19 @@
                     <tr>
                         <td>{{ primitive.id }}</td>
                         <td>{{ primitive.sku }}</td>
-                        <td>{{ primitive.name }}</td>
+                        <td>
+                            {% if primitive.url %}
+                                <a href="{{ primitive.url }}" target="_blank" rel="noopener">{{ primitive.name }}</a>
+                            {% else %}
+                                {{ primitive.name }}
+                            {% endif %}
+                        </td>
                         <td>{{ primitive.price }}</td>
-                        <td>{{ primitive.stock }}</td>
+                        <td>{{ primitive.stock_spb_tp }}</td>
+                        <td>{{ primitive.stock_msk }}</td>
+                        <td>{{ primitive.stock_spb_osh }}</td>
+                        <td>{{ primitive.stock_spb_svh }}</td>
+                        <td>{{ primitive.stock_spb_bsho }}</td>
                         <td>
                             <div class="table-actions">
                                 <a class="btn btn-secondary btn-icon" title="Править" aria-label="Править" href="{{ url_for('admin.primitive_edit', primitive_id=primitive.id) }}">

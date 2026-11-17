@@ -6,7 +6,7 @@
         <p>Список товаров:</p>
         <ul>
             {% for product in products %}
-                <li>{{ product.id }} {{  product.name }} {{ product.marketplaces | map(attribute='name') | join(', ') }} {{ product.price }}</li>
+                <li>{{ product.id }} {{  product.name }} {{ product.marketplaces | map(attribute='name') | join(', ') }} {{ product.selling_price if product.selling_price is not none else product.cost_price }}</li>
             {% endfor %}
         </ul>
         {% include 'structure/pagination.html' %}

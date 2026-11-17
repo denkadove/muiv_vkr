@@ -11,7 +11,7 @@ from app.modules.settings.constants import ADMIN_GROUP_ID
 from app.modules.settings.services import get_setting
 from app.modules.auth.models import User, UserGroup
 from app.modules.catalog.forms import CategoryForm, MarketplaceForm, PrimitiveForm, ProductForm
-from app.modules.catalog.models import Category, Marketplace, Primitive, Product, product_primitives
+from app.modules.catalog.models import Category, Marketplace, Primitive, Product, ProductMarketplace, product_primitives
 from app.modules.catalog.services import (
     create_category,
     create_marketplace,
@@ -43,9 +43,23 @@ from app.modules.auth.services import (
 @admin_bp.route("/users")
 @admin_required
 def users_list() -> str:
+    q = request.args.get("q", "").strip()
+    group_id = request.args.get("group_id", type=int)
+    active = request.args.get("active")
+
+    query = User.query
+    if q:
+        query = query.filter((User.username.ilike(f"%{q}%")) | (User.email.ilike(f"%{q}%")))
+    if group_id:
+        query = query.filter(User.group_id == group_id)
+    if active == "1":
+        query = query.filter(User.active.is_(True))
+
     page = request.args.get("page", 1, type=int)
-    pagination = User.query.order_by(User.id).paginate(page=page, per_page=20, error_out=False)
-    return render_template("users.html", users=pagination.items, pagination=pagination)
+    pagination = query.order_by(User.id).paginate(page=page, per_page=20, error_out=False)
+    groups = get_user_groups()
+    return render_template("users.html", users=pagination.items, pagination=pagination, groups=groups,
+                           q=q, group_id=group_id, active=active)
 
 
 @admin_bp.route("/users/create", methods=["GET", "POST"])
@@ -161,9 +175,56 @@ def impersonate_stop() -> Response:
 @admin_bp.route("/products")
 @admin_required
 def products_list() -> str:
+    q = request.args.get("q", "").strip()
+    category_id = request.args.get("category_id", type=int)
+    marketplace_id = request.args.get("marketplace_id", type=int)
+    marketplace_status = request.args.get("marketplace_status", "").strip()
+    no_stock = request.args.get("no_stock")
+    active = request.args.get("active")
+
+    query = Product.query
+    if q:
+        query = query.filter((Product.name.ilike(f"%{q}%")) | (Product.primitives.any(Primitive.sku.ilike(f"%{q}%"))))
+    if category_id:
+        query = query.filter(Product.category_id == category_id)
+    if marketplace_id:
+        if marketplace_status:
+            query = query.filter(Product.marketplace_links.any(
+                (ProductMarketplace.marketplace_id == marketplace_id) &
+                (ProductMarketplace.status == marketplace_status)
+            ))
+        else:
+            query = query.filter(Product.marketplace_links.any(
+                ProductMarketplace.marketplace_id == marketplace_id
+            ))
+    if active == "1":
+        query = query.filter(Product.active.is_(True))
     page = request.args.get("page", 1, type=int)
-    pagination = Product.query.order_by(Product.id).paginate(page=page, per_page=20, error_out=False)
-    return render_template("products.html", products=pagination.items, pagination=pagination)
+    per_page = 20
+
+    if no_stock == "1":
+        all_products = query.order_by(Product.id).all()
+        filtered = [
+            p for p in all_products
+            if p.stock_spb_tp == 0 and p.stock_msk == 0 and p.stock_spb_osh == 0
+            and p.stock_spb_svh == 0 and p.stock_spb_bsho == 0
+        ]
+        from flask_sqlalchemy.pagination import Pagination
+        pagination = Pagination(
+            query=None, items=filtered[(page - 1) * per_page:page * per_page],
+            page=page, per_page=per_page, total=len(filtered), pages=(len(filtered) + per_page - 1) // per_page,
+        )
+        products = pagination.items
+    else:
+        pagination = query.order_by(Product.id).paginate(page=page, per_page=per_page, error_out=False)
+        products = pagination.items
+
+    categories = get_categories()
+    marketplaces = Marketplace.query.order_by(Marketplace.name).all()
+    return render_template("products.html", products=products, pagination=pagination,
+                           categories=categories, marketplaces=marketplaces,
+                           q=q, category_id=category_id, marketplace_id=marketplace_id,
+                           marketplace_status=marketplace_status, no_stock=no_stock, active=active)
 
 
 @admin_bp.route("/products/create", methods=["GET", "POST"])
@@ -173,7 +234,13 @@ def product_create() -> Response | str:
     form.category_id.choices = [(category.id, category.name) for category in get_categories()]
 
     marketplaces = Marketplace.query.order_by(Marketplace.name).all()
-    form.marketplaces.choices = [(mp.id, mp.name) for mp in marketplaces]
+    # Заполняем статусы маркетплейсов
+    while len(form.marketplace_statuses.entries) > 0:
+        form.marketplace_statuses.pop_entry()
+    for mp in marketplaces:
+        entry = form.marketplace_statuses.append_entry()
+        entry.marketplace_id.data = mp.id
+        entry.status.data = "x"
 
     primitives = get_primitives()
     for line in form.composition:
@@ -184,12 +251,12 @@ def product_create() -> Response | str:
             create_product(form)
         except ValueError as error:
             flash(str(error), "error")
-            return render_template("product_form.html", form=form)
+            return render_template("product_form.html", form=form, primitives=primitives, marketplaces=marketplaces)
 
         flash(f"Товар {form.name.data} создан.", "success")
         return redirect(url_for("admin.products_list"))
 
-    return render_template("product_form.html", form=form)
+    return render_template("product_form.html", form=form, primitives=primitives, marketplaces=marketplaces)
 
 
 @admin_bp.route("/products/<int:product_id>/edit", methods=["GET", "POST"])
@@ -204,7 +271,12 @@ def product_edit(product_id: int) -> Response | str:
 
     form = ProductForm(obj=product)
     if request.method == "GET":
-        form.marketplaces.data = [mp.id for mp in product.marketplaces]
+        while len(form.marketplace_statuses.entries) > 0:
+            form.marketplace_statuses.pop_entry()
+        for mp in marketplaces:
+            entry = form.marketplace_statuses.append_entry()
+            entry.marketplace_id.data = mp.id
+            entry.status.data = product.marketplace_status(mp.id) or "x"
         while len(form.composition.entries) > 0:
             form.composition.pop_entry()
         for p in product.primitives:
@@ -215,17 +287,13 @@ def product_edit(product_id: int) -> Response | str:
                 )
             ).first()
             entry = form.composition.append_entry()
-            entry.primitive_id.data = p.id
+            entry.primitive_id.data = f"{p.sku} — {p.name}"
             entry.quantity.data = assoc.quantity if assoc else 1
         if not product.primitives:
             form.composition.append_entry()
 
     form.category_id.choices = [
         (category.id, category.name) for category in get_categories()
-    ]
-
-    form.marketplaces.choices = [
-        (m.id, m.name) for m in Marketplace.query.all()
     ]
 
     primitives = get_primitives()
@@ -237,12 +305,12 @@ def product_edit(product_id: int) -> Response | str:
             update_product(product.id, form)
         except ValueError as error:
             flash(str(error), "error")
-            return render_template("product_form.html", form=form, product=product)
+            return render_template("product_form.html", form=form, product=product, primitives=primitives, marketplaces=marketplaces)
 
         flash("Изменения сохранены.", "success")
         return redirect(url_for("admin.products_list"))
 
-    return render_template("product_form.html", form=form, product=product)
+    return render_template("product_form.html", form=form, product=product, primitives=primitives, marketplaces=marketplaces)
 
 
 @admin_bp.route("/products/<int:product_id>/delete", methods=["POST"])
@@ -260,9 +328,13 @@ def product_delete(product_id: int) -> Response:
 @admin_bp.route("/categories")
 @admin_required
 def categories_list() -> str:
+    q = request.args.get("q", "").strip()
+    query = Category.query
+    if q:
+        query = query.filter(Category.name.ilike(f"%{q}%"))
     page = request.args.get("page", 1, type=int)
-    pagination = Category.query.order_by(Category.id).paginate(page=page, per_page=20, error_out=False)
-    return render_template("categories.html", categories=pagination.items, pagination=pagination)
+    pagination = query.order_by(Category.id).paginate(page=page, per_page=20, error_out=False)
+    return render_template("categories.html", categories=pagination.items, pagination=pagination, q=q)
 
 
 @admin_bp.route("/categories/create", methods=["GET", "POST"])
@@ -378,9 +450,35 @@ def marketplace_delete(marketplace_id: int) -> Response:
 @admin_bp.route("/primitives")
 @admin_required
 def primitives_list() -> str:
+    q = request.args.get("q", "").strip()
+    no_stock = request.args.get("no_stock")
+    query = Primitive.query
+    if q:
+        query = query.filter((Primitive.name.ilike(f"%{q}%")) | (Primitive.sku.ilike(f"%{q}%")))
+
     page = request.args.get("page", 1, type=int)
-    pagination = Primitive.query.order_by(Primitive.id).paginate(page=page, per_page=20, error_out=False)
-    return render_template("primitives.html", primitives=pagination.items, pagination=pagination)
+    per_page = 20
+
+    if no_stock == "1":
+        all_items = query.order_by(Primitive.id).all()
+        filtered = [
+            p for p in all_items
+            if p.stock_spb_tp == 0 and p.stock_msk == 0 and p.stock_spb_osh == 0
+            and p.stock_spb_svh == 0 and p.stock_spb_bsho == 0
+        ]
+        from flask_sqlalchemy.pagination import Pagination
+        pagination = Pagination(
+            query=None, items=filtered[(page - 1) * per_page:page * per_page],
+            page=page, per_page=per_page, total=len(filtered),
+            pages=(len(filtered) + per_page - 1) // per_page,
+        )
+        primitives = pagination.items
+    else:
+        pagination = query.order_by(Primitive.id).paginate(page=page, per_page=per_page, error_out=False)
+        primitives = pagination.items
+
+    return render_template("primitives.html", primitives=primitives, pagination=pagination,
+                           q=q, no_stock=no_stock)
 
 
 @admin_bp.route("/primitives/create", methods=["GET", "POST"])
@@ -445,10 +543,23 @@ def primitives_import() -> Response:
 @admin_bp.route("/groups")
 @admin_required
 def groups_list() -> str:
-    get_user_groups()  # ensure defaults seeded
+    get_user_groups()
+    q = request.args.get("q", "").strip()
+    active = request.args.get("active")
+
+    query = UserGroup.query
+    if q:
+        query = query.filter(UserGroup.name.ilike(f"%{q}%"))
+    if active == "1":
+        query = query.filter(UserGroup.active.is_(True))
+
     page = request.args.get("page", 1, type=int)
-    pagination = UserGroup.query.order_by(UserGroup.id).paginate(page=page, per_page=20, error_out=False)
-    return render_template("groups.html", groups=pagination.items, pagination=pagination)
+    pagination = query.order_by(UserGroup.id).paginate(page=page, per_page=20, error_out=False)
+    groups = pagination.items
+    # кол-во пользователей в группе
+    user_counts = {g.id: User.query.filter_by(group_id=g.id).count() for g in groups}
+    return render_template("groups.html", groups=groups, pagination=pagination,
+                           user_counts=user_counts, q=q, active=active)
 
 
 @admin_bp.route("/groups/create", methods=["GET", "POST"])

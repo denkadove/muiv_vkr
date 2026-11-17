@@ -1,23 +1,64 @@
 """Формы каталога."""
 
 from flask_wtf import FlaskForm
-from wtforms import DecimalField, IntegerField, StringField, SubmitField, TextAreaField, SelectField, SelectMultipleField, FieldList, FormField
+
+from app.extensions import db
+from wtforms import BooleanField, DecimalField, HiddenField, IntegerField, StringField, SubmitField, TextAreaField, SelectField, SelectMultipleField, FieldList, FormField
 from wtforms.validators import DataRequired, Length, NumberRange
+
+
+class MarketplaceStatusForm(FlaskForm):
+    """Строка статуса размещения на маркетплейсе."""
+
+    marketplace_id = HiddenField()
+    status = SelectField("Статус", choices=[
+        ("v", "Размещён"),
+        ("o", "На модерации"),
+        ("x", "Не размещён"),
+        ("N", "Снят"),
+    ], default="x")
 
 
 class PrimitiveLineForm(FlaskForm):
     """Строка состава товара: примитив + количество."""
 
-    primitive_id = SelectField("Примитив", coerce=int, validators=[DataRequired()])
+    primitive_id = StringField("Примитив", validators=[DataRequired()])
     quantity = IntegerField("Кол-во", validators=[DataRequired(), NumberRange(min=1)], default=1)
+
+    def validate_primitive_id(self, field):
+        value = (field.data or "").strip()
+        if not value:
+            raise ValueError("Выберите примитив из списка.")
+        from app.modules.catalog.models import Primitive
+        # Поддержка формата "sku — name" или просто sku/name/id
+        pid = None
+        if value.isdigit():
+            pid = int(value)
+            prim = db.session.get(Primitive, pid)
+        else:
+            sku_part = value.split("—")[0].strip() if "—" in value else value
+            prim = Primitive.query.filter(
+                (Primitive.sku == sku_part) | (Primitive.name == value)
+            ).first()
+            if prim is None:
+                # поиск по частичному совпадению названия
+                prim = Primitive.query.filter(Primitive.name.ilike(f"%{value}%")).first()
+        if prim is None:
+            raise ValueError("Примитив не найден.")
+        # Сохраняем id в data для сервиса
+        field.data = str(prim.id)
 
 
 class ProductForm(FlaskForm):
     """Создание и редактирование товара."""
 
     name = StringField("Название", validators=[DataRequired(), Length(max=255)])
+    sku = StringField("Артикул (SKU)", validators=[Length(max=255)])
+    barcode = StringField("Штрихкод", validators=[Length(max=32)])
+    selling_price = DecimalField("Цена продажи", validators=[NumberRange(min=0)], places=2, default=None)
+    active = BooleanField("Товар активен", default=True)
     category_id = SelectField("Категория", coerce=int)
-    marketplaces = SelectMultipleField("Маркетплейсы", coerce=int)
+    marketplace_statuses = FieldList(FormField(MarketplaceStatusForm))
     description = TextAreaField("Описание")
     composition = FieldList(FormField(PrimitiveLineForm), min_entries=1)
     submit = SubmitField("Сохранить")
@@ -27,6 +68,10 @@ class CategoryForm(FlaskForm):
     """Создание и редактирование категории."""
 
     name = StringField("Название", validators=[DataRequired(), Length(max=255)])
+    active = BooleanField("Категория активна", default=True)
+    sort_order = IntegerField("Порядок сортировки", default=0)
+    processing_cost = DecimalField("Стоимость обработки, руб", validators=[NumberRange(min=0)], places=2, default=0)
+    coinvest_factor = DecimalField("Коэф. соинвеста", validators=[NumberRange(min=0)], places=2, default=0.5)
     submit = SubmitField("Сохранить")
 
 
@@ -36,7 +81,6 @@ class PrimitiveForm(FlaskForm):
     sku = StringField("Артикул (SKU)", validators=[DataRequired(), Length(max=255)])
     name = StringField("Название", validators=[DataRequired(), Length(max=255)])
     price = DecimalField("Цена", validators=[DataRequired(), NumberRange(min=0)], places=2)
-    stock = IntegerField("Остаток", validators=[DataRequired(), NumberRange(min=0)], default=0)
     submit = SubmitField("Сохранить")
 
 
@@ -44,6 +88,11 @@ class MarketplaceForm(FlaskForm):
     """Создание и редактирование маркетплейса."""
 
     name = StringField("Название", validators=[DataRequired(), Length(max=255)])
+    marketplace_type = SelectField("Тип магазина", choices=[
+        ("Яндекс", "Яндекс"),
+        ("Озон", "Озон"),
+        ("WB", "WB"),
+    ], validators=[DataRequired()])
     api_key = StringField("Api-ключ", validators=[DataRequired(), Length(max=255)])
     description = TextAreaField("Описание")
     submit = SubmitField("Сохранить")

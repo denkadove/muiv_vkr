@@ -14,6 +14,7 @@ from app.modules.catalog.models import (
     Marketplace,
     Primitive,
     Product,
+    ProductMarketplace,
     product_primitives,
 )
 
@@ -23,7 +24,7 @@ def get_categories() -> list[Category]:
     if Category.query.count() == 0:
         db.session.add(Category(name=DEFAULT_CATEGORY_NAME))
         db.session.commit()
-    return Category.query.order_by(Category.id).all()
+    return Category.query.order_by(Category.sort_order, Category.id).all()
 
 
 def create_category(form: CategoryForm) -> Category:
@@ -31,7 +32,13 @@ def create_category(form: CategoryForm) -> Category:
     if Category.query.filter_by(name=form.name.data).first() is not None:
         raise ValueError("Категория с таким названием уже существует.")
 
-    category = Category(name=form.name.data)
+    category = Category(
+        name=form.name.data,
+        active=form.active.data,
+        sort_order=form.sort_order.data or 0,
+        processing_cost=form.processing_cost.data or 0,
+        coinvest_factor=form.coinvest_factor.data or 0.5,
+    )
 
     db.session.add(category)
     try:
@@ -57,6 +64,10 @@ def update_category(category_id: int, form: CategoryForm) -> Category:
         raise ValueError("Категория с таким названием уже существует.")
 
     category.name = form.name.data
+    category.active = form.active.data
+    category.sort_order = form.sort_order.data or 0
+    category.processing_cost = form.processing_cost.data or 0
+    category.coinvest_factor = form.coinvest_factor.data or 0.5
     try:
         db.session.commit()
     except IntegrityError:
@@ -94,23 +105,33 @@ def create_product(form: ProductForm) -> Product:
     if category is None:
         raise ValueError("Указанная категория не существует.")
 
-    marketplaces: list[Marketplace] = Marketplace.query.filter(
-        Marketplace.id.in_(form.marketplaces.data or [])
-    ).all()
+    mp_statuses = getattr(form, "marketplace_statuses", None)
+    mp_lines = mp_statuses.data if mp_statuses is not None else []
 
     composition = getattr(form, "composition", None)
     lines = composition.data if composition is not None else []
     if not lines:
         raise ValueError("Товар должен состоять хотя бы из одного примитива.")
 
+    barcode = form.barcode.data.strip() if form.barcode.data else None
     product = Product(
         name=form.name.data,
-        marketplaces=marketplaces,
+        sku=form.sku.data.strip() if form.sku.data else None,
+        barcode=int(barcode) if barcode else None,
+        selling_price=form.selling_price.data,
+        active=form.active.data,
         description=form.description.data,
         category_id=category.id,
     )
     db.session.add(product)
     db.session.flush()
+
+    for line in mp_lines:
+        mp_id = line.get("marketplace_id") if isinstance(line, dict) else getattr(line, "marketplace_id", None)
+        status = line.get("status") if isinstance(line, dict) else getattr(line, "status", None)
+        if not mp_id:
+            continue
+        db.session.add(ProductMarketplace(product_id=product.id, marketplace_id=int(mp_id), status=status or "x"))
 
     for line in lines:
         primitive_id = line.get("primitive_id") if isinstance(line, dict) else getattr(line, "primitive_id", None)
@@ -142,14 +163,25 @@ def update_product(product_id: int, form: ProductForm) -> Product:
     if category is None:
         raise ValueError("Указанная категория не существует.")
 
-    marketplaces: list[Marketplace] = Marketplace.query.filter(
-        Marketplace.id.in_(form.marketplaces.data or [])
-    ).all()
+    mp_statuses = getattr(form, "marketplace_statuses", None)
+    mp_lines = mp_statuses.data if mp_statuses is not None else []
 
-    product.marketplaces = marketplaces
     product.name = form.name.data
+    product.active = form.active.data
+    product.sku = form.sku.data.strip() if form.sku.data else None
+    product.barcode = int(form.barcode.data.strip()) if form.barcode.data and form.barcode.data.strip() else None
+    product.selling_price = form.selling_price.data
     product.description = form.description.data
     product.category_id = category.id
+
+    # Обновляем связи с маркетплейсами
+    ProductMarketplace.query.filter_by(product_id=product.id).delete()
+    for line in mp_lines:
+        mp_id = line.get("marketplace_id") if isinstance(line, dict) else getattr(line, "marketplace_id", None)
+        status = line.get("status") if isinstance(line, dict) else getattr(line, "status", None)
+        if not mp_id:
+            continue
+        db.session.add(ProductMarketplace(product_id=product.id, marketplace_id=int(mp_id), status=status or "x"))
 
     # Обновляем состав
     db.session.execute(
@@ -177,6 +209,7 @@ def update_product(product_id: int, form: ProductForm) -> Product:
         )
 
     db.session.commit()
+    cleanup_unused_primitives()
     return product
 
 
@@ -194,6 +227,7 @@ def create_marketplace(form: MarketplaceForm) -> Marketplace:
     """Создаёт маркетплейс."""
     marketplace = Marketplace(
         name=form.name.data,
+        marketplace_type=form.marketplace_type.data,
         api_key=form.api_key.data,
         description=form.description.data,
     )
@@ -213,6 +247,7 @@ def update_marketplace(marketplace_id: int, form: MarketplaceForm) -> Marketplac
         raise LookupError("Маркетплейс не найден.")
 
     marketplace.name = form.name.data
+    marketplace.marketplace_type = form.marketplace_type.data
     marketplace.api_key = form.api_key.data
     marketplace.description = form.description.data
     try:
@@ -247,7 +282,6 @@ def create_primitive(form) -> Primitive:
         sku=form.sku.data,
         name=form.name.data,
         price=form.price.data,
-        stock=form.stock.data,
     )
     db.session.add(primitive)
     try:
@@ -270,7 +304,6 @@ def update_primitive(primitive_id: int, form) -> Primitive:
     primitive.sku = form.sku.data
     primitive.name = form.name.data
     primitive.price = form.price.data
-    primitive.stock = form.stock.data
     try:
         db.session.commit()
     except IntegrityError:
@@ -354,9 +387,6 @@ def import_primitives_from_feed(feed_url: str) -> tuple[int, int, str]:
 
         remainder_tp = _to_int(get("remainder_ism_spb_tp_73"))
         remainder_tp_reserve = _to_int(get("remainder_ism_spb_tp_reserve_73"))
-        stock = remainder_tp - remainder_tp_reserve
-        if stock < 0:
-            stock = 0
 
         primitive = Primitive.query.filter_by(sku=sku).first()
         is_new = primitive is None
@@ -376,16 +406,10 @@ def import_primitives_from_feed(feed_url: str) -> tuple[int, int, str]:
         primitive.price_004_usd = price_004_usd
         primitive.update_price_only = get("update_price_only") == "true"
         primitive.update_stock_only = get("update_stock_only") == "true"
-        primitive.remainder_ism_spb_m23_234 = _to_int(get("remainder_ism_spb_m23_234"))
-        primitive.remainder_ism_spb_m23_reserve_234 = _to_int(get("remainder_ism_spb_m23_reserve_234"))
-        primitive.remainder_ism_spb_parts_298 = _to_int(get("remainder_ism_spb_parts_298"))
-        primitive.remainder_ism_spb_parts_reserve_298 = _to_int(get("remainder_ism_spb_parts_reserve_298"))
         primitive.remainder_ism_spb_tp_73 = remainder_tp
         primitive.remainder_ism_spb_tp_reserve_73 = remainder_tp_reserve
         primitive.remainder_msk_salarevo_278 = _to_int(get("remainder_msk_salarevo_278"))
         primitive.remainder_msk_salarevo_reserve_278 = _to_int(get("remainder_msk_salarevo_reserve_278"))
-        primitive.remainder_msk_salarevo_parts_318 = _to_int(get("remainder_msk_salarevo_parts_318"))
-        primitive.remainder_msk_salarevo_parts_reserve_318 = _to_int(get("remainder_msk_salarevo_parts_reserve_318"))
         primitive.remainder_osha_spb_tp_305 = _to_int(get("remainder_osha_spb_tp_305"))
         primitive.remainder_osha_spb_tp_reserve_305 = _to_int(get("remainder_osha_spb_tp_reserve_305"))
         primitive.remainder_svh_179 = _to_int(get("remainder_svh_179"))
@@ -393,7 +417,6 @@ def import_primitives_from_feed(feed_url: str) -> tuple[int, int, str]:
         primitive.remainder_bsho_spb_tp_2 = _to_int(get("remainder_bsho_spb_tp_2"))
         primitive.remainder_bsho_spb_tp_reserve_2 = _to_int(get("remainder_bsho_spb_tp_reserve_2"))
         primitive.price = price_004_usd
-        primitive.stock = stock
         primitive.updated_at = datetime.now(timezone.utc)
         if is_new:
             primitive.created_at = datetime.now(timezone.utc)

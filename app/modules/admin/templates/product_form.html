@@ -12,6 +12,28 @@
         </div>
 
         <div class="form-group">
+            {{ form.sku.label(class="form-label") }} {{ form.sku(class="form-control") }}
+            {% if form.sku.errors %}<div class="error">{% for e in form.sku.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.barcode.label(class="form-label") }} {{ form.barcode(class="form-control") }}
+            {% if form.barcode.errors %}<div class="error">{% for e in form.barcode.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.selling_price.label(class="form-label") }} {{ form.selling_price(class="form-control") }}
+            {% if form.selling_price.errors %}<div class="error">{% for e in form.selling_price.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
+        </div>
+
+        <div class="form-group">
+            <div class="checkbox-field">
+                {{ form.active(class="checkbox-input") }}
+                {{ form.active.label(class="checkbox-label") }}
+            </div>
+        </div>
+
+        <div class="form-group">
             {{ form.description.label(class="form-label") }} {{ form.description(class="form-control") }}
             {% if form.description.errors %}<div class="error">{% for e in form.description.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
         </div>
@@ -22,8 +44,16 @@
         </div>
 
         <div class="form-group">
-            {{ form.marketplaces.label(class="form-label") }} {{ form.marketplaces(class="form-control") }}
-            {% if form.marketplaces.errors %}<div class="error">{% for e in form.marketplaces.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
+            <label class="form-label">Размещение по магазинам</label>
+            <div class="marketplace-grid">
+                {% for ms in form.marketplace_statuses %}
+                <div class="marketplace-row">
+                    <span>{{ marketplaces[loop.index0].short_name or marketplaces[loop.index0].name }}</span>
+                    {{ ms.status(class="form-control") }}
+                    {{ ms.marketplace_id() }}
+                </div>
+                {% endfor %}
+            </div>
         </div>
 
         <div class="form-group">
@@ -31,7 +61,7 @@
             <div id="composition-rows">
                 {% for line in form.composition %}
                 <div class="composition-row">
-                    {{ line.primitive_id(class="form-control") }}
+                    <input list="primitives-list" name="{{ line.primitive_id.name }}" value="{{ line.primitive_id.data or '' }}" class="form-control" placeholder="SKU или название" />
                     {{ line.quantity(class="form-control") }}
                     <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
                     {% if line.primitive_id.errors %}<div class="error">{% for e in line.primitive_id.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
@@ -40,6 +70,11 @@
                 {% endfor %}
             </div>
             <button type="button" class="btn btn-secondary btn-sm" id="add-primitive">+ Добавить примитив</button>
+            <datalist id="primitives-list">
+                {% for p in primitives %}
+                <option value="{{ p.sku }} — {{ p.name }}"></option>
+                {% endfor %}
+            </datalist>
             {% if form.composition.errors %}<div class="error">{% for e in form.composition.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
         </div>
 
@@ -54,20 +89,16 @@
     (function () {
         const container = document.getElementById('composition-rows');
         const addBtn = document.getElementById('add-primitive');
-        const choices = {{ (form.composition[0].primitive_id.choices if form.composition else []) | tojson }};
         addBtn.addEventListener('click', function () {
             const idx = container.children.length;
             const row = document.createElement('div');
             row.className = 'composition-row';
-            const select = document.createElement('select');
-            select.name = `composition-${idx}-primitive_id`;
-            select.className = 'form-control';
-            choices.forEach(function (c) {
-                const opt = document.createElement('option');
-                opt.value = c[0];
-                opt.textContent = c[1];
-                select.appendChild(opt);
-            });
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = `composition-${idx}-primitive_id`;
+            input.setAttribute('list', 'primitives-list');
+            input.className = 'form-control';
+            input.placeholder = 'SKU или название';
             const qty = document.createElement('input');
             qty.type = 'number';
             qty.name = `composition-${idx}-quantity`;
@@ -79,7 +110,7 @@
             del.className = 'btn btn-danger btn-sm';
             del.textContent = '✕';
             del.onclick = function () { row.remove(); };
-            row.appendChild(select);
+            row.appendChild(input);
             row.appendChild(qty);
             row.appendChild(del);
             container.appendChild(row);

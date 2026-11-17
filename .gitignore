@@ -9,3 +9,5 @@ PLAN.md
 *.plan
 notes/
 logs/
+seed.py
+products.csv

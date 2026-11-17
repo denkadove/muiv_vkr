@@ -8,13 +8,29 @@
 
         <div class="form-group">
             {{ form.name.label(class="form-label") }} {{ form.name(class="form-control") }}
-            {% if form.name.errors %}
-            <div class="error">
-                {% for error in form.name.errors %}
-                <span>{{ error }}</span>
-                {% endfor %}
+            {% if form.name.errors %}<div class="error">{% for e in form.name.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
+        </div>
+
+        <div class="form-group">
+            <div class="checkbox-field">
+                {{ form.active(class="checkbox-input") }}
+                {{ form.active.label(class="checkbox-label") }}
             </div>
-            {% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.sort_order.label(class="form-label") }} {{ form.sort_order(class="form-control") }}
+            {% if form.sort_order.errors %}<div class="error">{% for e in form.sort_order.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.processing_cost.label(class="form-label") }} {{ form.processing_cost(class="form-control") }}
+            {% if form.processing_cost.errors %}<div class="error">{% for e in form.processing_cost.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
+        </div>
+
+        <div class="form-group">
+            {{ form.coinvest_factor.label(class="form-label") }} {{ form.coinvest_factor(class="form-control") }}
+            {% if form.coinvest_factor.errors %}<div class="error">{% for e in form.coinvest_factor.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
         </div>
 
         <div class="form-group">

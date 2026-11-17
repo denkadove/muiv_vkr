@@ -6,6 +6,18 @@
         <a class="btn btn-primary" href="{{ url_for('admin.user_create') }}">Создать пользователя</a>
     </div>
 
+    <form method="GET" class="filter-form">
+        <input type="text" name="q" value="{{ q or '' }}" placeholder="Логин или Email" class="form-control search-input" />
+        <select name="group_id" class="form-control">
+            <option value="">Все группы</option>
+            {% for g in groups %}
+            <option value="{{ g.id }}" {% if group_id == g.id %}selected{% endif %}>{{ g.name }}</option>
+            {% endfor %}
+        </select>
+        <label><input type="checkbox" name="active" value="1" {% if active == '1' %}checked{% endif %} /> Только активные</label>
+        <button type="submit" class="btn btn-secondary btn-sm">Найти</button>
+    </form>
+
     {% if users %}
         <div class="table-wrap">
             <table class="data-table">

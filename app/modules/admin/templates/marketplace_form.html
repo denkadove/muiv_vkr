@@ -8,6 +8,17 @@
 
         <div class="form-group">
             {{ form.name.label(class="form-label") }} {{ form.name(class="form-control") }}
+
+        <div class="form-group">
+            {{ form.marketplace_type.label(class="form-label") }} {{ form.marketplace_type(class="form-control") }}
+            {% if form.marketplace_type.errors %}
+            <div class="error">
+                {% for error in form.marketplace_type.errors %}
+                <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
             {% if form.name.errors %}
             <div class="error">
                 {% for error in form.name.errors %}

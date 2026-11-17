@@ -2,6 +2,8 @@
 
 from flask import url_for, request
 
+from app.extensions import db
+
 SECTION_NAMES = {
     "users": "Пользователи",
     "groups": "Группы",
@@ -26,27 +28,27 @@ def _get_object_name(section: str, obj_id: int) -> str:
     try:
         if section == "users":
             from app.modules.auth.models import User
-            obj = User.query.get(obj_id)
+            obj = db.session.get(User, obj_id)
             return obj.username if obj else f"#{obj_id}"
         if section == "groups":
             from app.modules.auth.models import UserGroup
-            obj = UserGroup.query.get(obj_id)
+            obj = db.session.get(UserGroup, obj_id)
             return obj.name if obj else f"#{obj_id}"
         if section == "products":
             from app.modules.catalog.models import Product
-            obj = Product.query.get(obj_id)
+            obj = db.session.get(Product, obj_id)
             return obj.name if obj else f"#{obj_id}"
         if section == "categories":
             from app.modules.catalog.models import Category
-            obj = Category.query.get(obj_id)
+            obj = db.session.get(Category, obj_id)
             return obj.name if obj else f"#{obj_id}"
         if section == "marketplaces":
             from app.modules.catalog.models import Marketplace
-            obj = Marketplace.query.get(obj_id)
+            obj = db.session.get(Marketplace, obj_id)
             return obj.name if obj else f"#{obj_id}"
         if section == "primitives":
             from app.modules.catalog.models import Primitive
-            obj = Primitive.query.get(obj_id)
+            obj = db.session.get(Primitive, obj_id)
             return obj.name if obj else f"#{obj_id}"
     except Exception:
         pass

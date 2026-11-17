@@ -12,14 +12,24 @@ class Category(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), unique=True, nullable=False)
+    active = db.Column(db.Boolean, default=True)
+    sort_order = db.Column(db.Integer, default=0)
+    processing_cost = db.Column(db.Numeric(10, 2), default=0)
+    coinvest_factor = db.Column(db.Numeric(5, 2), default=0.5)
     products = db.relationship("Product", backref="category")
 
 
-product_marketplaces = db.Table(
-    "product_marketplaces",
-    db.Column("product_id", db.Integer, db.ForeignKey("products.id"), primary_key=True),
-    db.Column("marketplace_id", db.Integer, db.ForeignKey("marketplaces.id"), primary_key=True),
-)
+class ProductMarketplace(db.Model):
+    """Связь товара и маркетплейса со статусом размещения."""
+
+    __tablename__ = "product_marketplaces"
+
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), primary_key=True)
+    marketplace_id = db.Column(db.Integer, db.ForeignKey("marketplaces.id"), primary_key=True)
+    status = db.Column(db.String(10), nullable=False, default="x")
+
+    product = db.relationship("Product", back_populates="marketplace_links")
+    marketplace = db.relationship("Marketplace", back_populates="product_links")
 
 product_primitives = db.Table(
     "product_primitives",
@@ -35,10 +45,14 @@ class Product(db.Model):
     __tablename__ = "products"
 
     id = db.Column(db.Integer, primary_key=True)
+    sku = db.Column(db.String(255), unique=True, nullable=True)
     name = db.Column(db.String(255), nullable=False)
+    barcode = db.Column(db.BigInteger, nullable=True)
+    selling_price = db.Column(db.Numeric(10, 2), nullable=True)
     description = db.Column(db.Text)
+    active = db.Column(db.Boolean, default=True)
     category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=False)
-    marketplaces = db.relationship("Marketplace", secondary=product_marketplaces, backref="products")
+    marketplace_links = db.relationship("ProductMarketplace", back_populates="product", cascade="all, delete-orphan")
     primitives = db.relationship(
         "Primitive",
         secondary=product_primitives,
@@ -48,8 +62,8 @@ class Product(db.Model):
     created = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     @property
-    def price(self):
-        """Сумма цен примитивов с учётом количества."""
+    def cost_price(self):
+        """Цена входа: сумма цен примитивов с учётом количества."""
         total = 0
         for primitive in self.primitives:
             # quantity хранится в association, но relationship не даёт прямой доступ;
@@ -64,9 +78,7 @@ class Product(db.Model):
             total += float(primitive.price) * qty
         return round(total, 2)
 
-    @property
-    def stock(self):
-        """Наименьший остаток среди примитивов с учётом количества."""
+    def _warehouse_stock(self, attr: str) -> int:
         if not self.primitives:
             return 0
         values = []
@@ -78,8 +90,47 @@ class Product(db.Model):
                 )
             ).first()
             qty = assoc.quantity if assoc else 1
-            values.append(primitive.stock // qty if qty else 0)
+            prim_stock = getattr(primitive, attr, 0)
+            values.append(prim_stock // qty if qty else 0)
         return min(values) if values else 0
+
+    @property
+    def stock_spb_tp(self):
+        return self._warehouse_stock("stock_spb_tp")
+
+    @property
+    def stock_msk(self):
+        return self._warehouse_stock("stock_msk")
+
+    @property
+    def stock_spb_osh(self):
+        return self._warehouse_stock("stock_spb_osh")
+
+    @property
+    def stock_spb_svh(self):
+        return self._warehouse_stock("stock_spb_svh")
+
+    @property
+    def stock_spb_bsho(self):
+        return self._warehouse_stock("stock_spb_bsho")
+
+    @property
+    def marketplaces(self):
+        return [link.marketplace for link in self.marketplace_links]
+
+    def marketplace_status(self, marketplace_id):
+        for link in self.marketplace_links:
+            if link.marketplace_id == marketplace_id:
+                return link.status
+        return None
+
+    @property
+    def marketplace_status_map(self):
+        result = {}
+        for link in self.marketplace_links:
+            if link.marketplace:
+                result[link.marketplace.short_name or link.marketplace.name] = link.status
+        return result
 
 
 class Marketplace(db.Model):
@@ -88,8 +139,11 @@ class Marketplace(db.Model):
     __tablename__ = "marketplaces"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False, unique=True)
+    short_name = db.Column(db.String(50), nullable=True)
+    marketplace_type = db.Column(db.String(50), nullable=False, default="Яндекс")
     description = db.Column(db.Text)
     api_key = db.Column(db.String(255), nullable=True, unique=True)
+    product_links = db.relationship("ProductMarketplace", back_populates="marketplace", cascade="all, delete-orphan")
 
 
 class Primitive(db.Model):
@@ -98,14 +152,13 @@ class Primitive(db.Model):
     __tablename__ = "primitives"
 
     id = db.Column(db.Integer, primary_key=True)
-    # sku = product_id из фида, уникальный в нашей системе
+    # sku = offer_id из фида, уникальный в нашей системе
     sku = db.Column(db.String(255), unique=True, nullable=False)
-    # offer_id из фида (site_id), не уникальный
+    # product_id из фида (site_id), не уникальный
     site_id = db.Column(db.Integer, nullable=True)
     name = db.Column(db.String(255), nullable=False)
-    # Основные поля (вычисляются из фида)
+    # Основное поле (вычисляется из фида)
     price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
-    stock = db.Column(db.Integer, nullable=False, default=0)
     # Поля из фида
     product_id = db.Column(db.Integer, nullable=True)
     url = db.Column(db.String(500), nullable=True)
@@ -117,16 +170,11 @@ class Primitive(db.Model):
     price_004_usd = db.Column(db.Numeric(10, 2), nullable=True)
     update_price_only = db.Column(db.Boolean, default=False)
     update_stock_only = db.Column(db.Boolean, default=False)
-    remainder_ism_spb_m23_234 = db.Column(db.Integer, default=0)
-    remainder_ism_spb_m23_reserve_234 = db.Column(db.Integer, default=0)
-    remainder_ism_spb_parts_298 = db.Column(db.Integer, default=0)
-    remainder_ism_spb_parts_reserve_298 = db.Column(db.Integer, default=0)
+    # Остатки по складам
     remainder_ism_spb_tp_73 = db.Column(db.Integer, default=0)
     remainder_ism_spb_tp_reserve_73 = db.Column(db.Integer, default=0)
     remainder_msk_salarevo_278 = db.Column(db.Integer, default=0)
     remainder_msk_salarevo_reserve_278 = db.Column(db.Integer, default=0)
-    remainder_msk_salarevo_parts_318 = db.Column(db.Integer, default=0)
-    remainder_msk_salarevo_parts_reserve_318 = db.Column(db.Integer, default=0)
     remainder_osha_spb_tp_305 = db.Column(db.Integer, default=0)
     remainder_osha_spb_tp_reserve_305 = db.Column(db.Integer, default=0)
     remainder_svh_179 = db.Column(db.Integer, default=0)
@@ -135,3 +183,23 @@ class Primitive(db.Model):
     remainder_bsho_spb_tp_reserve_2 = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    @property
+    def stock_spb_tp(self):
+        return max(0, self.remainder_ism_spb_tp_73 - self.remainder_ism_spb_tp_reserve_73)
+
+    @property
+    def stock_msk(self):
+        return max(0, self.remainder_msk_salarevo_278 - self.remainder_msk_salarevo_reserve_278)
+
+    @property
+    def stock_spb_osh(self):
+        return max(0, self.remainder_osha_spb_tp_305 - self.remainder_osha_spb_tp_reserve_305)
+
+    @property
+    def stock_spb_svh(self):
+        return max(0, self.remainder_svh_179 - self.remainder_svh_reserve_179)
+
+    @property
+    def stock_spb_bsho(self):
+        return max(0, self.remainder_bsho_spb_tp_2 - self.remainder_bsho_spb_tp_reserve_2)

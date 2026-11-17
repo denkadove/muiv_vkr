@@ -7,6 +7,12 @@
         <a class="btn btn-primary" href="{{ url_for('admin.group_create') }}">Создать группу</a>
     </div>
 
+    <form method="GET" class="filter-form">
+        <input type="text" name="q" value="{{ q or '' }}" placeholder="Название" class="form-control search-input" />
+        <label><input type="checkbox" name="active" value="1" {% if active == '1' %}checked{% endif %} /> Только активные</label>
+        <button type="submit" class="btn btn-secondary btn-sm">Найти</button>
+    </form>
+
     {% if groups %}
         <div class="table-wrap">
             <table class="data-table">
@@ -15,6 +21,7 @@
                         <th>ID</th>
                         <th>Название</th>
                         <th>Slug</th>
+                        <th>Пользователей</th>
                         <th>Активна</th>
                         <th>Действия</th>
                     </tr>
@@ -25,6 +32,7 @@
                         <td>{{ group.id }}</td>
                         <td>{{ group.name }}</td>
                         <td>{{ group.slug }}</td>
+                        <td>{{ user_counts.get(group.id, 0) }}</td>
                         <td>{{ 'да' if group.active else 'нет' }}</td>
                         <td>
                             <div class="table-actions">

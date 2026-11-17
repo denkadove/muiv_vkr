@@ -7,17 +7,55 @@
         <a class="btn btn-primary" href="{{ url_for('admin.product_create') }}">Создать товар</a>
     </div>
 
+    <form method="GET" class="filter-form">
+        <input type="text" name="q" value="{{ q or '' }}" placeholder="Название или SKU" class="form-control search-input" />
+        <select name="category_id" class="form-control">
+            <option value="">Все категории</option>
+            {% for c in categories %}
+            <option value="{{ c.id }}" {% if category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="marketplace_id" class="form-control">
+            <option value="">Все магазины</option>
+            {% for m in marketplaces %}
+            <option value="{{ m.id }}" {% if marketplace_id == m.id %}selected{% endif %}>{{ m.short_name or m.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="marketplace_status" class="form-control">
+            <option value="">Любой статус</option>
+            <option value="v" {% if marketplace_status == 'v' %}selected{% endif %}>Размещён</option>
+            <option value="o" {% if marketplace_status == 'o' %}selected{% endif %}>На модерации</option>
+            <option value="x" {% if marketplace_status == 'x' %}selected{% endif %}>Не размещён</option>
+            <option value="N" {% if marketplace_status == 'N' %}selected{% endif %}>Снят</option>
+        </select>
+        <label><input type="checkbox" name="no_stock" value="1" {% if no_stock == '1' %}checked{% endif %} /> Без остатков</label>
+        <label><input type="checkbox" name="active" value="1" {% if active == '1' %}checked{% endif %} /> Только активные</label>
+        <button type="submit" class="btn btn-secondary btn-sm">Найти</button>
+    </form>
+
     {% if products %}
         <div class="table-wrap">
             <table class="data-table">
                 <thead>
                     <tr>
                         <th>ID</th>
+                        <th>SKU</th>
+                        <th>Штрихкод</th>
                         <th>Название</th>
-                        <th>Цена</th>
-                        <th>Остаток</th>
+                        <th>Вход</th>
+                        <th>Продажа</th>
+                        <th>СПБ ТП</th>
+                        <th>МСК</th>
+                        <th>СПБ ОША</th>
+                        <th>СПБ СВХ</th>
+                        <th>СПБ БШО</th>
                         <th>Категория</th>
-                        <th>Магазин</th>
+                        <th>Я_ПШТ</th>
+                        <th>О_ПШТ</th>
+                        <th>WB_ПШТ</th>
+                        <th>Я_Сол</th>
+                        <th>О_Сол</th>
+                        <th>WB_Сол</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
@@ -25,11 +63,24 @@
                     {% for product in products %}
                     <tr>
                         <td>{{ product.id }}</td>
+                        <td>{{ product.sku or '—' }}</td>
+                        <td>{{ product.barcode or '—' }}</td>
                         <td>{{ product.name }}</td>
-                        <td>{{ product.price }}</td>
-                        <td>{{ product.stock }}</td>
+                        <td>{{ product.cost_price }}</td>
+                        <td>{{ product.selling_price or '—' }}</td>
+                        <td>{{ product.stock_spb_tp }}</td>
+                        <td>{{ product.stock_msk }}</td>
+                        <td>{{ product.stock_spb_osh }}</td>
+                        <td>{{ product.stock_spb_svh }}</td>
+                        <td>{{ product.stock_spb_bsho }}</td>
                         <td>{{ product.category.name if product.category else 'Нет' }}</td>
-                        <td>{{ product.marketplaces | map(attribute='name') | join(', ') }}</td>
+                        {% set ms = product.marketplace_status_map %}
+                        <td>{{ ms.get('Я_ПШТ', '—') }}</td>
+                        <td>{{ ms.get('О_ПШТ', '—') }}</td>
+                        <td>{{ ms.get('WB_ПШТ', '—') }}</td>
+                        <td>{{ ms.get('Я_Сол', '—') }}</td>
+                        <td>{{ ms.get('О_Сол', '—') }}</td>
+                        <td>{{ ms.get('WB_Сол', '—') }}</td>
                         <td>
                             <div class="table-actions">
                                 <a class="btn btn-secondary btn-icon" title="Править" aria-label="Править" href="{{ url_for('admin.product_edit', product_id=product.id) }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></a>

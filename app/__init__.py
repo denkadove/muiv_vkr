@@ -36,6 +36,7 @@ def create_app() -> Flask:
     from app.modules.auth.models import User
     # Импорт моделей каталога для регистрации в SQLAlchemy
     from app.modules.catalog import models as catalog_models  # noqa: F401
+    from app.modules.settings import models as settings_models  # noqa: F401
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)

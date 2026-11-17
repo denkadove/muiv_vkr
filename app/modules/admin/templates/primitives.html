@@ -3,7 +3,14 @@
 {% block admin_content %}
     <div class="page-header">
         <h2>Примитивы</h2>
-        <a class="btn btn-primary" href="{{ url_for('admin.primitive_create') }}">Создать примитив</a>
+        <div class="table-actions">
+            <form method="POST" action="{{ url_for('admin.primitives_import') }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-secondary">Загрузить из фида</button>
+            </form>
+            <a class="btn btn-primary" href="{{ url_for('admin.primitive_create') }}">Создать примитив</a>
+            <a class="btn btn-secondary" href="{{ url_for('settings.settings_edit') }}">Настройки</a>
+        </div>
     </div>
 
     {% if primitives %}

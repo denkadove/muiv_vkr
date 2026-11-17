@@ -14,7 +14,7 @@
                 <a class="admin-menu-link{{ ' is-active' if groups_active else '' }}" {% if groups_active %}aria-current="page"{% endif %} href="{{ url_for('admin.groups_list') }}">Группы</a>
             </li>
             <li>
-                <a class="admin-menu-link"  href="#">Настройки</a>
+                <a class="admin-menu-link{{ ' is-active' if request.endpoint == 'settings.settings_edit' else '' }}" href="{{ url_for('settings.settings_edit') }}">Настройки</a>
             </li>
         </ul>
     </details>

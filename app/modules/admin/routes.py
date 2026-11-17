@@ -8,6 +8,7 @@ from app.modules.admin import admin_bp
 from app.modules.admin.forms import CreateUserForm, UserForm, UserGroupForm
 from app.modules.auth.decorators import admin_required
 from app.modules.settings.constants import ADMIN_GROUP_ID
+from app.modules.settings.services import get_setting
 from app.modules.auth.models import User, UserGroup
 from app.modules.catalog.forms import CategoryForm, MarketplaceForm, PrimitiveForm, ProductForm
 from app.modules.catalog.models import Category, Marketplace, Primitive, Product, product_primitives
@@ -22,6 +23,7 @@ from app.modules.catalog.services import (
     delete_product,
     get_categories,
     get_primitives,
+    import_primitives_from_feed,
     update_category,
     update_marketplace,
     update_primitive,
@@ -425,6 +427,18 @@ def primitive_delete(primitive_id: int) -> Response:
         flash(str(error), "error")
     else:
         flash("Примитив удалён.", "success")
+    return redirect(url_for("admin.primitives_list"))
+
+
+@admin_bp.route("/primitives/import", methods=["POST"])
+@admin_required
+def primitives_import() -> Response:
+    feed_url = get_setting("feed_url")
+    try:
+        created, updated, file_path = import_primitives_from_feed(feed_url)
+        flash(f"Импорт завершён: создано {created}, обновлено {updated}. Файл: {file_path}", "success")
+    except Exception as error:
+        flash(f"Ошибка импорта: {error}", "error")
     return redirect(url_for("admin.primitives_list"))
 
 

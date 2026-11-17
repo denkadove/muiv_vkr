@@ -93,13 +93,45 @@ class Marketplace(db.Model):
 
 
 class Primitive(db.Model):
-    """Примитив — составная часть товара."""
+    """Примитив — составная часть товара (может импортироваться из фида)."""
 
     __tablename__ = "primitives"
 
     id = db.Column(db.Integer, primary_key=True)
+    # sku = product_id из фида, уникальный в нашей системе
     sku = db.Column(db.String(255), unique=True, nullable=False)
+    # offer_id из фида (site_id), не уникальный
+    site_id = db.Column(db.Integer, nullable=True)
     name = db.Column(db.String(255), nullable=False)
+    # Основные поля (вычисляются из фида)
     price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     stock = db.Column(db.Integer, nullable=False, default=0)
-    created = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    # Поля из фида
+    product_id = db.Column(db.Integer, nullable=True)
+    url = db.Column(db.String(500), nullable=True)
+    price_208_rub = db.Column(db.Numeric(10, 2), nullable=True)
+    price_208_usd = db.Column(db.Numeric(10, 2), nullable=True)
+    price_213_rub = db.Column(db.Numeric(10, 2), nullable=True)
+    price_213_usd = db.Column(db.Numeric(10, 2), nullable=True)
+    price_004_rub = db.Column(db.Numeric(10, 2), nullable=True)
+    price_004_usd = db.Column(db.Numeric(10, 2), nullable=True)
+    update_price_only = db.Column(db.Boolean, default=False)
+    update_stock_only = db.Column(db.Boolean, default=False)
+    remainder_ism_spb_m23_234 = db.Column(db.Integer, default=0)
+    remainder_ism_spb_m23_reserve_234 = db.Column(db.Integer, default=0)
+    remainder_ism_spb_parts_298 = db.Column(db.Integer, default=0)
+    remainder_ism_spb_parts_reserve_298 = db.Column(db.Integer, default=0)
+    remainder_ism_spb_tp_73 = db.Column(db.Integer, default=0)
+    remainder_ism_spb_tp_reserve_73 = db.Column(db.Integer, default=0)
+    remainder_msk_salarevo_278 = db.Column(db.Integer, default=0)
+    remainder_msk_salarevo_reserve_278 = db.Column(db.Integer, default=0)
+    remainder_msk_salarevo_parts_318 = db.Column(db.Integer, default=0)
+    remainder_msk_salarevo_parts_reserve_318 = db.Column(db.Integer, default=0)
+    remainder_osha_spb_tp_305 = db.Column(db.Integer, default=0)
+    remainder_osha_spb_tp_reserve_305 = db.Column(db.Integer, default=0)
+    remainder_svh_179 = db.Column(db.Integer, default=0)
+    remainder_svh_reserve_179 = db.Column(db.Integer, default=0)
+    remainder_bsho_spb_tp_2 = db.Column(db.Integer, default=0)
+    remainder_bsho_spb_tp_reserve_2 = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

@@ -1,5 +1,9 @@
 """Сервисный слой каталога: бизнес-логика, независимая от HTTP."""
 
+import os
+import urllib.request
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
@@ -295,3 +299,107 @@ def cleanup_unused_primitives() -> None:
     for p in unused:
         db.session.delete(p)
     db.session.commit()
+
+
+def _to_int(value) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _to_float(value) -> float:
+    try:
+        return float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def import_primitives_from_feed(feed_url: str) -> tuple[int, int, str]:
+    """Скачивает фид, парсит и upsert-ит примитивы.
+
+    Возвращает (created, updated, file_path).
+    """
+    if not feed_url:
+        raise ValueError("URL фида не задан в настройках.")
+
+    logs_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
+        "logs",
+    )
+    os.makedirs(logs_dir, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    file_path = os.path.join(logs_dir, f"{timestamp}_primitives.xml")
+
+    urllib.request.urlretrieve(feed_url, file_path)
+
+    tree = ET.parse(file_path)
+    root = tree.getroot()
+
+    created = 0
+    updated = 0
+
+    for offer in root.iter("offer"):
+        def get(tag):
+            el = offer.find(tag)
+            return el.text.strip() if el is not None and el.text else None
+
+        offer_id = _to_int(get("offer_id"))
+        product_id = _to_int(get("product_id"))
+        name = get("name") or ""
+        sku = str(offer_id) if offer_id else str(product_id)
+
+        price_004_usd = _to_float(get("price_004_usd"))
+
+        remainder_tp = _to_int(get("remainder_ism_spb_tp_73"))
+        remainder_tp_reserve = _to_int(get("remainder_ism_spb_tp_reserve_73"))
+        stock = remainder_tp - remainder_tp_reserve
+        if stock < 0:
+            stock = 0
+
+        primitive = Primitive.query.filter_by(sku=sku).first()
+        is_new = primitive is None
+        if is_new:
+            primitive = Primitive(sku=sku)
+            db.session.add(primitive)
+
+        primitive.site_id = product_id
+        primitive.product_id = product_id
+        primitive.name = name
+        primitive.url = get("url")
+        primitive.price_208_rub = _to_float(get("price_208_rub"))
+        primitive.price_208_usd = _to_float(get("price_208_usd"))
+        primitive.price_213_rub = _to_float(get("price_213_rub"))
+        primitive.price_213_usd = _to_float(get("price_213_usd"))
+        primitive.price_004_rub = _to_float(get("price_004_rub"))
+        primitive.price_004_usd = price_004_usd
+        primitive.update_price_only = get("update_price_only") == "true"
+        primitive.update_stock_only = get("update_stock_only") == "true"
+        primitive.remainder_ism_spb_m23_234 = _to_int(get("remainder_ism_spb_m23_234"))
+        primitive.remainder_ism_spb_m23_reserve_234 = _to_int(get("remainder_ism_spb_m23_reserve_234"))
+        primitive.remainder_ism_spb_parts_298 = _to_int(get("remainder_ism_spb_parts_298"))
+        primitive.remainder_ism_spb_parts_reserve_298 = _to_int(get("remainder_ism_spb_parts_reserve_298"))
+        primitive.remainder_ism_spb_tp_73 = remainder_tp
+        primitive.remainder_ism_spb_tp_reserve_73 = remainder_tp_reserve
+        primitive.remainder_msk_salarevo_278 = _to_int(get("remainder_msk_salarevo_278"))
+        primitive.remainder_msk_salarevo_reserve_278 = _to_int(get("remainder_msk_salarevo_reserve_278"))
+        primitive.remainder_msk_salarevo_parts_318 = _to_int(get("remainder_msk_salarevo_parts_318"))
+        primitive.remainder_msk_salarevo_parts_reserve_318 = _to_int(get("remainder_msk_salarevo_parts_reserve_318"))
+        primitive.remainder_osha_spb_tp_305 = _to_int(get("remainder_osha_spb_tp_305"))
+        primitive.remainder_osha_spb_tp_reserve_305 = _to_int(get("remainder_osha_spb_tp_reserve_305"))
+        primitive.remainder_svh_179 = _to_int(get("remainder_svh_179"))
+        primitive.remainder_svh_reserve_179 = _to_int(get("remainder_svh_reserve_179"))
+        primitive.remainder_bsho_spb_tp_2 = _to_int(get("remainder_bsho_spb_tp_2"))
+        primitive.remainder_bsho_spb_tp_reserve_2 = _to_int(get("remainder_bsho_spb_tp_reserve_2"))
+        primitive.price = price_004_usd
+        primitive.stock = stock
+        primitive.updated_at = datetime.now(timezone.utc)
+        if is_new:
+            primitive.created_at = datetime.now(timezone.utc)
+            created += 1
+        else:
+            updated += 1
+
+    db.session.commit()
+    return created, updated, file_path

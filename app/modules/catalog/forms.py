@@ -3,8 +3,9 @@
 from flask_wtf import FlaskForm
 
 from app.extensions import db
-from wtforms import BooleanField, DecimalField, HiddenField, IntegerField, StringField, SubmitField, TextAreaField, SelectField, SelectMultipleField, FieldList, FormField
-from wtforms.validators import DataRequired, Length, NumberRange
+from wtforms import BooleanField, DecimalField, FloatField, HiddenField, IntegerField, StringField, SubmitField, TextAreaField, SelectField, SelectMultipleField, FieldList, FormField
+from wtforms.validators import DataRequired, Length, NumberRange, Optional, URL
+from flask_wtf.file import FileField, MultipleFileField
 
 
 class MarketplaceStatusForm(FlaskForm):
@@ -55,7 +56,17 @@ class ProductForm(FlaskForm):
     name = StringField("Название", validators=[DataRequired(), Length(max=255)])
     sku = StringField("Артикул (SKU)", validators=[Length(max=255)])
     barcode = StringField("Штрихкод", validators=[Length(max=32)])
-    selling_price = DecimalField("Цена продажи", validators=[NumberRange(min=0)], places=2, default=None)
+    selling_price = DecimalField("Цена продажи", validators=[Optional(), NumberRange(min=0)], places=2)
+    weight = FloatField("Вес, кг", validators=[Optional(), NumberRange(min=0)])
+    length = FloatField("Длина, см", validators=[Optional(), NumberRange(min=0)])
+    width = FloatField("Ширина, см", validators=[Optional(), NumberRange(min=0)])
+    height = FloatField("Высота, см", validators=[Optional(), NumberRange(min=0)])
+    brand = StringField("Бренд", validators=[Length(max=255)])
+    country = StringField("Страна", validators=[Length(max=255)])
+    warranty = StringField("Гарантия", validators=[Length(max=255)])
+    video_url = StringField("Ссылка на видео", validators=[Optional(), URL(), Length(max=500)])
+    certificate = FileField("Сертификат соответствия")
+    images = MultipleFileField("Фото товара")
     active = BooleanField("Товар активен", default=True)
     category_id = SelectField("Категория", coerce=int)
     marketplace_statuses = FieldList(FormField(MarketplaceStatusForm))

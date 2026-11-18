@@ -14,6 +14,7 @@ from app.modules.catalog.models import (
     Marketplace,
     Primitive,
     Product,
+    ProductImage,
     ProductMarketplace,
     product_primitives,
 )
@@ -119,12 +120,46 @@ def create_product(form: ProductForm) -> Product:
         sku=form.sku.data.strip() if form.sku.data else None,
         barcode=int(barcode) if barcode else None,
         selling_price=form.selling_price.data,
+        weight=form.weight.data,
+        length=form.length.data,
+        width=form.width.data,
+        height=form.height.data,
+        brand=form.brand.data.strip() if form.brand.data else None,
+        country=form.country.data.strip() if form.country.data else None,
+        warranty=form.warranty.data.strip() if form.warranty.data else None,
+        video_url=form.video_url.data.strip() if form.video_url.data else None,
         active=form.active.data,
         description=form.description.data,
         category_id=category.id,
     )
     db.session.add(product)
     db.session.flush()
+
+    # Загрузка фото
+    from flask import current_app, request
+    import os, uuid
+    upload_dir = os.path.join(current_app.root_path, "static", "uploads", "products")
+    os.makedirs(upload_dir, exist_ok=True)
+    allowed_ext = {"png", "jpg", "jpeg", "gif", "webp"}
+    files = request.files.getlist("images") if request.files else []
+    for i, f in enumerate(files[:10]):
+        if not f or not f.filename:
+            continue
+        ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
+        if ext not in allowed_ext:
+            continue
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        f.save(os.path.join(upload_dir, filename))
+        db.session.add(ProductImage(product_id=product.id, filename=filename, is_main=(i == 0), sort_order=i))
+
+    # Загрузка сертификата
+    cert = request.files.get("certificate") if request.files else None
+    if cert and cert.filename:
+        ext = cert.filename.rsplit(".", 1)[-1].lower() if "." in cert.filename else ""
+        if ext in {"pdf", "png", "jpg", "jpeg"}:
+            filename = f"{uuid.uuid4().hex}.{ext}"
+            cert.save(os.path.join(upload_dir, filename))
+            product.certificate = filename
 
     for line in mp_lines:
         mp_id = line.get("marketplace_id") if isinstance(line, dict) else getattr(line, "marketplace_id", None)
@@ -171,8 +206,45 @@ def update_product(product_id: int, form: ProductForm) -> Product:
     product.sku = form.sku.data.strip() if form.sku.data else None
     product.barcode = int(form.barcode.data.strip()) if form.barcode.data and form.barcode.data.strip() else None
     product.selling_price = form.selling_price.data
+    product.weight = form.weight.data
+    product.length = form.length.data
+    product.width = form.width.data
+    product.height = form.height.data
+    product.brand = form.brand.data.strip() if form.brand.data else None
+    product.country = form.country.data.strip() if form.country.data else None
+    product.warranty = form.warranty.data.strip() if form.warranty.data else None
+    product.video_url = form.video_url.data.strip() if form.video_url.data else None
     product.description = form.description.data
     product.category_id = category.id
+
+    # Загрузка новых фото
+    from flask import current_app, request
+    import os, uuid
+    upload_dir = os.path.join(current_app.root_path, "static", "uploads", "products")
+    os.makedirs(upload_dir, exist_ok=True)
+    allowed_ext = {"png", "jpg", "jpeg", "gif", "webp"}
+    files = request.files.getlist("images") if request.files else []
+    existing_count = ProductImage.query.filter_by(product_id=product.id).count() if False else len(product.images)
+    for i, f in enumerate(files):
+        if existing_count + i >= 10:
+            break
+        if not f or not f.filename:
+            continue
+        ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
+        if ext not in allowed_ext:
+            continue
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        f.save(os.path.join(upload_dir, filename))
+        db.session.add(ProductImage(product_id=product.id, filename=filename, is_main=(len(product.images) == 0), sort_order=len(product.images)))
+
+    # Загрузка сертификата (заменяет старый)
+    cert = request.files.get("certificate") if request.files else None
+    if cert and cert.filename:
+        ext = cert.filename.rsplit(".", 1)[-1].lower() if "." in cert.filename else ""
+        if ext in {"pdf", "png", "jpg", "jpeg"}:
+            filename = f"{uuid.uuid4().hex}.{ext}"
+            cert.save(os.path.join(upload_dir, filename))
+            product.certificate = filename
 
     # Обновляем связи с маркетплейсами
     ProductMarketplace.query.filter_by(product_id=product.id).delete()

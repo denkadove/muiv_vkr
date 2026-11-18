@@ -9,4 +9,5 @@ class SettingsForm(FlaskForm):
     """Настройки приложения."""
 
     feed_url = StringField("URL фида примитивов", validators=[Optional(), URL()])
+    tiny_api_key = StringField("TinyMCE API key", validators=[Optional()])
     submit = SubmitField("Сохранить")

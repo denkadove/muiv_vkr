@@ -175,6 +175,7 @@ def impersonate_stop() -> Response:
 @admin_bp.route("/products")
 @admin_required
 def products_list() -> str:
+    tab = request.args.get("tab", "prices")
     q = request.args.get("q", "").strip()
     category_id = request.args.get("category_id", type=int)
     marketplace_id = request.args.get("marketplace_id", type=int)
@@ -184,7 +185,11 @@ def products_list() -> str:
 
     query = Product.query
     if q:
-        query = query.filter((Product.name.ilike(f"%{q}%")) | (Product.primitives.any(Primitive.sku.ilike(f"%{q}%"))))
+        query = query.filter(
+            (Product.name.ilike(f"%{q}%"))
+            | (Product.sku.ilike(f"%{q}%"))
+            | (Product.primitives.any(Primitive.sku.ilike(f"%{q}%")))
+        )
     if category_id:
         query = query.filter(Product.category_id == category_id)
     if marketplace_id:
@@ -199,10 +204,11 @@ def products_list() -> str:
             ))
     if active == "1":
         query = query.filter(Product.active.is_(True))
+
     page = request.args.get("page", 1, type=int)
     per_page = 20
 
-    if no_stock == "1":
+    if no_stock == "1" and tab == "stock":
         all_products = query.order_by(Product.id).all()
         filtered = [
             p for p in all_products
@@ -212,7 +218,8 @@ def products_list() -> str:
         from flask_sqlalchemy.pagination import Pagination
         pagination = Pagination(
             query=None, items=filtered[(page - 1) * per_page:page * per_page],
-            page=page, per_page=per_page, total=len(filtered), pages=(len(filtered) + per_page - 1) // per_page,
+            page=page, per_page=per_page, total=len(filtered),
+            pages=(len(filtered) + per_page - 1) // per_page,
         )
         products = pagination.items
     else:
@@ -224,12 +231,14 @@ def products_list() -> str:
     return render_template("products.html", products=products, pagination=pagination,
                            categories=categories, marketplaces=marketplaces,
                            q=q, category_id=category_id, marketplace_id=marketplace_id,
-                           marketplace_status=marketplace_status, no_stock=no_stock, active=active)
+                           marketplace_status=marketplace_status, no_stock=no_stock, active=active,
+                           tab=tab)
 
 
 @admin_bp.route("/products/create", methods=["GET", "POST"])
 @admin_required
 def product_create() -> Response | str:
+    tab = request.args.get("tab", "main")
     form = ProductForm()
     form.category_id.choices = [(category.id, category.name) for category in get_categories()]
 
@@ -251,17 +260,18 @@ def product_create() -> Response | str:
             create_product(form)
         except ValueError as error:
             flash(str(error), "error")
-            return render_template("product_form.html", form=form, primitives=primitives, marketplaces=marketplaces)
+            return render_template("product_form.html", form=form, primitives=primitives, marketplaces=marketplaces, tab=tab)
 
         flash(f"Товар {form.name.data} создан.", "success")
-        return redirect(url_for("admin.products_list"))
+        return redirect(url_for("admin.products_list", tab=tab))
 
-    return render_template("product_form.html", form=form, primitives=primitives, marketplaces=marketplaces)
+    return render_template("product_form.html", form=form, primitives=primitives, marketplaces=marketplaces, tab=tab)
 
 
 @admin_bp.route("/products/<int:product_id>/edit", methods=["GET", "POST"])
 @admin_required
 def product_edit(product_id: int) -> Response | str:
+    tab = request.args.get("tab", "main")
     product: Product | None = db.session.get(Product, product_id)
     marketplaces = Marketplace.query.order_by(Marketplace.name).all()
 
@@ -305,12 +315,12 @@ def product_edit(product_id: int) -> Response | str:
             update_product(product.id, form)
         except ValueError as error:
             flash(str(error), "error")
-            return render_template("product_form.html", form=form, product=product, primitives=primitives, marketplaces=marketplaces)
+            return render_template("product_form.html", form=form, product=product, primitives=primitives, marketplaces=marketplaces, tab=tab)
 
         flash("Изменения сохранены.", "success")
-        return redirect(url_for("admin.products_list"))
+        return redirect(url_for("admin.products_list", tab=tab))
 
-    return render_template("product_form.html", form=form, product=product, primitives=primitives, marketplaces=marketplaces)
+    return render_template("product_form.html", form=form, product=product, primitives=primitives, marketplaces=marketplaces, tab=tab)
 
 
 @admin_bp.route("/products/<int:product_id>/delete", methods=["POST"])

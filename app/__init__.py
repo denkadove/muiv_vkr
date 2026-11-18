@@ -1,5 +1,7 @@
 """Фабрика приложения: инициализация расширений и блюпринтов."""
 
+import os
+
 from flask import Flask, session
 
 from app.extensions import bcrypt, csrf, db, login_manager, migrate
@@ -35,8 +37,8 @@ def create_app() -> Flask:
     from app.modules.settings.constants import ADMIN_GROUP_ID
     from app.modules.auth.models import User
     # Импорт моделей каталога для регистрации в SQLAlchemy
-    from app.modules.catalog import models as catalog_models  # noqa: F401
-    from app.modules.settings import models as settings_models  # noqa: F401
+    from app.modules.catalog import models as catalog_models
+    from app.modules.settings import models as settings_models
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -64,9 +66,15 @@ def create_app() -> Flask:
     register_routes(app)
 
     from app.modules.breadcrumbs.utils import build_breadcrumbs
+    from app.modules.settings.services import get_setting
 
     @app.context_processor
     def inject_breadcrumbs() -> dict:
         return {"breadcrumbs": build_breadcrumbs()}
+
+    @app.context_processor
+    def inject_tiny_api_key() -> dict:
+        key = get_setting("tiny_api_key") or os.environ.get("TINY_API_KEY") or "no-api-key"
+        return {"tiny_api_key": key}
 
     return app

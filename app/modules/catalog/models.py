@@ -49,6 +49,15 @@ class Product(db.Model):
     name = db.Column(db.String(255), nullable=False)
     barcode = db.Column(db.BigInteger, nullable=True)
     selling_price = db.Column(db.Numeric(10, 2), nullable=True)
+    weight = db.Column(db.Float, nullable=True)
+    length = db.Column(db.Float, nullable=True)
+    width = db.Column(db.Float, nullable=True)
+    height = db.Column(db.Float, nullable=True)
+    brand = db.Column(db.String(255), nullable=True)
+    country = db.Column(db.String(255), nullable=True)
+    warranty = db.Column(db.String(255), nullable=True)
+    certificate = db.Column(db.String(255), nullable=True)
+    video_url = db.Column(db.String(500), nullable=True)
     description = db.Column(db.Text)
     active = db.Column(db.Boolean, default=True)
     category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=False)
@@ -131,6 +140,20 @@ class Product(db.Model):
             if link.marketplace:
                 result[link.marketplace.short_name or link.marketplace.name] = link.status
         return result
+
+
+class ProductImage(db.Model):
+    """Фото товара."""
+
+    __tablename__ = "product_images"
+
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    is_main = db.Column(db.Boolean, default=False)
+    sort_order = db.Column(db.Integer, default=0)
+
+    product = db.relationship("Product", backref="images")
 
 
 class Marketplace(db.Model):

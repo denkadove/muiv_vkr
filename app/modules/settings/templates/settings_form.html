@@ -8,6 +8,11 @@
             {{ form.feed_url.label(class="form-label") }} {{ form.feed_url(class="form-control") }}
             {% if form.feed_url.errors %}<div class="error">{% for e in form.feed_url.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
         </div>
+
+        <div class="form-group">
+            {{ form.tiny_api_key.label(class="form-label") }} {{ form.tiny_api_key(class="form-control") }}
+            {% if form.tiny_api_key.errors %}<div class="error">{% for e in form.tiny_api_key.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
+        </div>
         <div class="form-group">
             {{ form.submit(class="btn btn-primary") }}
         </div>

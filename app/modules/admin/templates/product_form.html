@@ -3,79 +3,143 @@
 {% block admin_content %}
     <h2>{% if product %} Редактирование {% else %} Создание {% endif %} товара</h2>
 
-    <form method="POST" id="product-form">
+    <div class="tabs">
+        <a class="tab-link {{ 'active' if tab == 'main' }}" href="?tab=main">Основное</a>
+        <a class="tab-link {{ 'active' if tab == 'description' }}" href="?tab=description">Описание</a>
+    </div>
+
+    <form method="POST" id="product-form" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
+        <input type="hidden" name="tab" value="{{ tab }}" />
 
-        <div class="form-group">
-            {{ form.name.label(class="form-label") }} {{ form.name(class="form-control") }}
-            {% if form.name.errors %}<div class="error">{% for e in form.name.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
-        </div>
-
-        <div class="form-group">
-            {{ form.sku.label(class="form-label") }} {{ form.sku(class="form-control") }}
-            {% if form.sku.errors %}<div class="error">{% for e in form.sku.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
-        </div>
-
-        <div class="form-group">
-            {{ form.barcode.label(class="form-label") }} {{ form.barcode(class="form-control") }}
-            {% if form.barcode.errors %}<div class="error">{% for e in form.barcode.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
-        </div>
-
-        <div class="form-group">
-            {{ form.selling_price.label(class="form-label") }} {{ form.selling_price(class="form-control") }}
-            {% if form.selling_price.errors %}<div class="error">{% for e in form.selling_price.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
-        </div>
-
-        <div class="form-group">
-            <div class="checkbox-field">
-                {{ form.active(class="checkbox-input") }}
-                {{ form.active.label(class="checkbox-label") }}
-            </div>
-        </div>
-
-        <div class="form-group">
-            {{ form.description.label(class="form-label") }} {{ form.description(class="form-control") }}
-            {% if form.description.errors %}<div class="error">{% for e in form.description.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
-        </div>
-
-        <div class="form-group">
-            {{ form.category_id.label(class="form-label") }} {{ form.category_id(class="form-control") }}
-            {% if form.category_id.errors %}<div class="error">{% for e in form.category_id.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">Размещение по магазинам</label>
-            <div class="marketplace-grid">
-                {% for ms in form.marketplace_statuses %}
-                <div class="marketplace-row">
-                    <span>{{ marketplaces[loop.index0].short_name or marketplaces[loop.index0].name }}</span>
-                    {{ ms.status(class="form-control") }}
-                    {{ ms.marketplace_id() }}
+        <div class="tab-content {{ 'hidden' if tab != 'main' }}" id="tab-main">
+            <!-- Основные данные -->
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.name.label(class="form-label") }} {{ form.name(class="form-control") }}
+                    {% if form.name.errors %}<div class="error">{% for e in form.name.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
                 </div>
-                {% endfor %}
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.sku.label(class="form-label") }} {{ form.sku(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    {{ form.barcode.label(class="form-label") }} {{ form.barcode(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    {{ form.selling_price.label(class="form-label") }} {{ form.selling_price(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-field">
+                        {{ form.active(class="checkbox-input") }}
+                        {{ form.active.label(class="checkbox-label") }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Категория и маркетплейсы -->
+            <div class="form-group">
+                {{ form.category_id.label(class="form-label") }} {{ form.category_id(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Размещение по магазинам</label>
+                <div class="marketplace-grid">
+                    {% for ms in form.marketplace_statuses %}
+                    <div class="marketplace-row">
+                        <span>{{ marketplaces[loop.index0].short_name or marketplaces[loop.index0].name }}</span>
+                        {{ ms.status(class="form-control") }}
+                        {{ ms.marketplace_id() }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Состав -->
+            <div class="form-group">
+                <label class="form-label">Состав (примитивы)</label>
+                <div id="composition-rows">
+                    {% for line in form.composition %}
+                    <div class="composition-row">
+                        <input list="primitives-list" name="{{ line.primitive_id.name }}" value="{{ line.primitive_id.data or '' }}" class="form-control" placeholder="SKU или название" />
+                        {{ line.quantity(class="form-control") }}
+                        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="add-primitive">+ Добавить примитив</button>
+                <datalist id="primitives-list">
+                    {% for p in primitives %}
+                    <option value="{{ p.sku }} — {{ p.name }}"></option>
+                    {% endfor %}
+                </datalist>
             </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">Состав (примитивы)</label>
-            <div id="composition-rows">
-                {% for line in form.composition %}
-                <div class="composition-row">
-                    <input list="primitives-list" name="{{ line.primitive_id.name }}" value="{{ line.primitive_id.data or '' }}" class="form-control" placeholder="SKU или название" />
-                    {{ line.quantity(class="form-control") }}
-                    <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
-                    {% if line.primitive_id.errors %}<div class="error">{% for e in line.primitive_id.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
-                    {% if line.quantity.errors %}<div class="error">{% for e in line.quantity.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
+        <div class="tab-content {{ 'hidden' if tab != 'description' }}" id="tab-description">
+            <!-- ВГХ и бренд -->
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.weight.label(class="form-label") }} {{ form.weight(class="form-control") }}
                 </div>
-                {% endfor %}
+                <div class="form-group">
+                    {{ form.length.label(class="form-label") }} {{ form.length(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    {{ form.width.label(class="form-label") }} {{ form.width(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    {{ form.height.label(class="form-label") }} {{ form.height(class="form-control") }}
+                </div>
             </div>
-            <button type="button" class="btn btn-secondary btn-sm" id="add-primitive">+ Добавить примитив</button>
-            <datalist id="primitives-list">
-                {% for p in primitives %}
-                <option value="{{ p.sku }} — {{ p.name }}"></option>
-                {% endfor %}
-            </datalist>
-            {% if form.composition.errors %}<div class="error">{% for e in form.composition.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.brand.label(class="form-label") }} {{ form.brand(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    {{ form.country.label(class="form-label") }} {{ form.country(class="form-control") }}
+                </div>
+                <div class="form-group">
+                    {{ form.warranty.label(class="form-label") }} {{ form.warranty(class="form-control") }}
+                </div>
+            </div>
+
+            <!-- Медиа -->
+            <div class="form-group">
+                {{ form.video_url.label(class="form-label") }} {{ form.video_url(class="form-control") }}
+            </div>
+
+            {% if product and product.images %}
+            <div class="form-group">
+                <label class="form-label">Текущие фото</label>
+                <div class="photo-preview">
+                    {% for img in product.images %}
+                    <img src="{{ url_for('static', filename='uploads/products/' + img.filename) }}" alt="Фото" />
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                {{ form.images.label(class="form-label") }} {{ form.images(class="form-control") }}
+                <div id="image-preview" class="photo-preview"></div>
+            </div>
+
+            <div class="form-group">
+                {{ form.certificate.label(class="form-label") }} {{ form.certificate(class="form-control") }}
+                {% if product and product.certificate %}
+                <small>Текущий: {{ product.certificate }}</small>
+                {% endif %}
+            </div>
+
+            <!-- Описание -->
+            <div class="form-group">
+                {{ form.description.label(class="form-label") }} {{ form.description(class="form-control", id="description-editor") }}
+                {% if form.description.errors %}<div class="error">{% for e in form.description.errors %}<span>{{ e }}</span>{% endfor %}</div>{% endif %}
+            </div>
         </div>
 
         <div class="form-group">
@@ -85,36 +149,102 @@
 
     <p><a href="{{ url_for('admin.products_list') }}">← К списку товаров</a></p>
 
+    <script src="https://cdn.tiny.cloud/1/{{ tiny_api_key }}/tinymce/8/tinymce.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
     <script>
     (function () {
-        const container = document.getElementById('composition-rows');
-        const addBtn = document.getElementById('add-primitive');
-        addBtn.addEventListener('click', function () {
-            const idx = container.children.length;
-            const row = document.createElement('div');
-            row.className = 'composition-row';
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.name = `composition-${idx}-primitive_id`;
-            input.setAttribute('list', 'primitives-list');
-            input.className = 'form-control';
-            input.placeholder = 'SKU или название';
-            const qty = document.createElement('input');
-            qty.type = 'number';
-            qty.name = `composition-${idx}-quantity`;
-            qty.value = 1;
-            qty.min = 1;
-            qty.className = 'form-control';
-            const del = document.createElement('button');
-            del.type = 'button';
-            del.className = 'btn btn-danger btn-sm';
-            del.textContent = '✕';
-            del.onclick = function () { row.remove(); };
-            row.appendChild(input);
-            row.appendChild(qty);
-            row.appendChild(del);
-            container.appendChild(row);
+        function initTinyMCE() {
+            if (typeof tinymce !== 'undefined' && !tinymce.get('description-editor')) {
+                tinymce.init({
+                    selector: '#description-editor',
+                    plugins: [
+                        'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 'link', 'lists', 'media', 'searchreplace', 'table', 'visualblocks', 'wordcount',
+                        'checklist', 'mediaembed', 'casechange', 'formatpainter', 'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 'powerpaste', 'advtable', 'advcode', 'advtemplate', 'tinymceai', 'uploadcare', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown', 'importword', 'exportword', 'exportpdf'
+                    ],
+                    toolbar: 'undo redo | tinymceai-chat tinymceai-quickactions tinymceai-review | blocks fontfamily fontsize | bold italic underline strikethrough | link media table mergetags | addcomment showcomments | spellcheckdialog a11ycheck typography uploadcare | align lineheight | checklist numlist bullist indent outdent | emoticons charmap | removeformat',
+                    tinycomments_mode: 'embedded',
+                    tinycomments_author: 'Author name',
+                    mergetags_list: [
+                        { value: 'First.Name', title: 'First Name' },
+                        { value: 'Email', title: 'Email' },
+                    ],
+                    tinymceai_token_provider: async () => {
+                        await fetch(`https://demo.api.tiny.cloud/1/{{ tiny_api_key }}/auth/random`, { method: "POST", credentials: "include" });
+                        return { token: await fetch(`https://demo.api.tiny.cloud/1/{{ tiny_api_key }}/jwt/tinymceai`, { credentials: "include" }).then(r => r.text()) };
+                    },
+                    uploadcare_public_key: 'b057c4b58c6fec5d9487',
+                    promotion: false,
+                    height: 200,
+                });
+            }
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(function (el) {
+                el.classList.toggle('hidden', el.id !== 'tab-' + tab);
+            });
+            document.querySelectorAll('.tab-link').forEach(function (el) {
+                el.classList.toggle('active', el.getAttribute('href').includes('tab=' + tab));
+            });
+            if (tab === 'description') {
+                setTimeout(initTinyMCE, 100);
+            }
+        }
+
+        var initialTab = '{{ tab }}';
+        showTab(initialTab);
+
+        document.querySelectorAll('.tab-link').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                window.location.href = this.getAttribute('href');
+            });
         });
+
+        // Превью выбранных фото
+        var imageInput = document.querySelector('input[name="images"]');
+        var previewContainer = document.getElementById('image-preview');
+        if (imageInput && previewContainer) {
+            imageInput.addEventListener('change', function () {
+                previewContainer.innerHTML = '';
+                Array.from(this.files).forEach(function (file) {
+                    if (!file.type.startsWith('image/')) return;
+                    var img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    previewContainer.appendChild(img);
+                });
+            });
+        }
+
+        var container = document.getElementById('composition-rows');
+        var addBtn = document.getElementById('add-primitive');
+        if (addBtn) {
+            addBtn.addEventListener('click', function () {
+                var idx = container.children.length;
+                var row = document.createElement('div');
+                row.className = 'composition-row';
+                var input = document.createElement('input');
+                input.type = 'text';
+                input.name = 'composition-' + idx + '-primitive_id';
+                input.setAttribute('list', 'primitives-list');
+                input.className = 'form-control';
+                input.placeholder = 'SKU или название';
+                var qty = document.createElement('input');
+                qty.type = 'number';
+                qty.name = 'composition-' + idx + '-quantity';
+                qty.value = 1;
+                qty.min = 1;
+                qty.className = 'form-control';
+                var del = document.createElement('button');
+                del.type = 'button';
+                del.className = 'btn btn-danger btn-sm';
+                del.textContent = '✕';
+                del.onclick = function () { row.remove(); };
+                row.appendChild(input);
+                row.appendChild(qty);
+                row.appendChild(del);
+                container.appendChild(row);
+            });
+        }
     })();
     </script>
 {% endblock %}

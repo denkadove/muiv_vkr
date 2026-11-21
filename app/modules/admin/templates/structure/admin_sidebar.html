@@ -23,7 +23,7 @@
         <ul class="admin-menu-list">
             {% set products_endpoints = ('admin.products_list', 'admin.product_create', 'admin.product_edit') %}
             {% set categories_endpoints = ('admin.categories_list', 'admin.category_create', 'admin.category_edit') %}
-            {% set marketplaces_endpoints = ('admin.marketplaces_list', 'admin.marketplaces_create', 'admin.marketplaces_edit') %}
+            {% set marketplaces_endpoints = ('admin.marketplaces_list', 'admin.marketplace_create', 'admin.marketplace_edit') %}
             {% set products_active = request.endpoint in products_endpoints %}
             {% set categories_active = request.endpoint in categories_endpoints %}
             {% set marketplaces_active = request.endpoint in marketplaces_endpoints %}
@@ -35,9 +35,6 @@
             </li>
             <li>
                 <a class="admin-menu-link{{ ' is-active' if request.endpoint in ('admin.primitives_list','admin.primitive_create','admin.primitive_edit') else '' }}" href="{{ url_for('admin.primitives_list') }}">Примитивы</a>
-            </li>
-            <li>
-                <a class="admin-menu-link"  href="#">Отчеты</a>
             </li>
             <li>
                 <a class="admin-menu-link{{ ' is-active' if marketplaces_active else '' }}" {% if marketplaces_active %}aria-current="page"{% endif %} href="{{ url_for('admin.marketplaces_list') }}">Магазины</a>

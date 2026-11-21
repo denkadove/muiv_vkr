@@ -2,6 +2,7 @@
 
 from flask import Response, flash, redirect, render_template, session, url_for, request
 from flask_login import current_user, login_user, logout_user
+from flask_sqlalchemy.pagination import Pagination
 
 from app.extensions import db
 from app.modules.admin import admin_bp
@@ -38,6 +39,45 @@ from app.modules.auth.services import (
     update_user,
     update_user_group,
 )
+
+NO_STOCK_FIELDS = (
+    "stock_spb_tp", "stock_msk", "stock_spb_osh", "stock_spb_svh", "stock_spb_bsho",
+)
+
+
+class _ListPagination(Pagination):
+    """Пагинация по уже выбранному списку (фильтр «Без остатков»)."""
+
+    def __init__(self, items: list, page: int, per_page: int = 20):
+        self._items = items
+        super().__init__(page=page, per_page=per_page, error_out=False, count=True)
+
+    def _query_items(self) -> list:
+        return self._items[self._query_offset:self._query_offset + self.per_page]
+
+    def _query_count(self) -> int:
+        return len(self._items)
+
+
+def _paginate_items(items: list, page: int, per_page: int = 20) -> Pagination:
+    return _ListPagination(items=items, page=page, per_page=per_page)
+
+
+def _has_no_stock(item) -> bool:
+    """Проверяет, что по всем складам нулевой остаток."""
+    return all(getattr(item, field, 0) == 0 for field in NO_STOCK_FIELDS)
+
+
+def _prepare_marketplace_statuses(form, marketplaces, product=None) -> None:
+    """Заполняет статусы размещения при показе формы, не перезаписывая POST."""
+    while len(form.marketplace_statuses.entries) > 0:
+        form.marketplace_statuses.pop_entry()
+    for marketplace in marketplaces:
+        entry = form.marketplace_statuses.append_entry()
+        entry.marketplace_id.data = marketplace.id
+        entry.status.data = (
+            product.marketplace_status(marketplace.id) if product else None
+        ) or "x"
 
 
 @admin_bp.route("/users")
@@ -210,21 +250,14 @@ def products_list() -> str:
 
     if no_stock == "1" and tab == "stock":
         all_products = query.order_by(Product.id).all()
-        filtered = [
-            p for p in all_products
-            if p.stock_spb_tp == 0 and p.stock_msk == 0 and p.stock_spb_osh == 0
-            and p.stock_spb_svh == 0 and p.stock_spb_bsho == 0
-        ]
-        from flask_sqlalchemy.pagination import Pagination
-        pagination = Pagination(
-            query=None, items=filtered[(page - 1) * per_page:page * per_page],
-            page=page, per_page=per_page, total=len(filtered),
-            pages=(len(filtered) + per_page - 1) // per_page,
+        pagination = _paginate_items(
+            [product for product in all_products if _has_no_stock(product)],
+            page=page,
+            per_page=per_page,
         )
-        products = pagination.items
     else:
         pagination = query.order_by(Product.id).paginate(page=page, per_page=per_page, error_out=False)
-        products = pagination.items
+    products = pagination.items
 
     categories = get_categories()
     marketplaces = Marketplace.query.order_by(Marketplace.name).all()
@@ -243,17 +276,10 @@ def product_create() -> Response | str:
     form.category_id.choices = [(category.id, category.name) for category in get_categories()]
 
     marketplaces = Marketplace.query.order_by(Marketplace.name).all()
-    # Заполняем статусы маркетплейсов
-    while len(form.marketplace_statuses.entries) > 0:
-        form.marketplace_statuses.pop_entry()
-    for mp in marketplaces:
-        entry = form.marketplace_statuses.append_entry()
-        entry.marketplace_id.data = mp.id
-        entry.status.data = "x"
+    if request.method == "GET":
+        _prepare_marketplace_statuses(form, marketplaces)
 
     primitives = get_primitives()
-    for line in form.composition:
-        line.primitive_id.choices = [(p.id, f"{p.sku} — {p.name}") for p in primitives]
 
     if form.validate_on_submit():
         try:
@@ -281,12 +307,7 @@ def product_edit(product_id: int) -> Response | str:
 
     form = ProductForm(obj=product)
     if request.method == "GET":
-        while len(form.marketplace_statuses.entries) > 0:
-            form.marketplace_statuses.pop_entry()
-        for mp in marketplaces:
-            entry = form.marketplace_statuses.append_entry()
-            entry.marketplace_id.data = mp.id
-            entry.status.data = product.marketplace_status(mp.id) or "x"
+        _prepare_marketplace_statuses(form, marketplaces, product=product)
         while len(form.composition.entries) > 0:
             form.composition.pop_entry()
         for p in product.primitives:
@@ -307,8 +328,6 @@ def product_edit(product_id: int) -> Response | str:
     ]
 
     primitives = get_primitives()
-    for line in form.composition:
-        line.primitive_id.choices = [(p.id, f"{p.sku} — {p.name}") for p in primitives]
 
     if form.validate_on_submit():
         try:
@@ -338,6 +357,7 @@ def product_delete(product_id: int) -> Response:
 @admin_bp.route("/categories")
 @admin_required
 def categories_list() -> str:
+    get_categories()  # создаёт категорию по умолчанию при первом посещении
     q = request.args.get("q", "").strip()
     query = Category.query
     if q:
@@ -471,21 +491,14 @@ def primitives_list() -> str:
 
     if no_stock == "1":
         all_items = query.order_by(Primitive.id).all()
-        filtered = [
-            p for p in all_items
-            if p.stock_spb_tp == 0 and p.stock_msk == 0 and p.stock_spb_osh == 0
-            and p.stock_spb_svh == 0 and p.stock_spb_bsho == 0
-        ]
-        from flask_sqlalchemy.pagination import Pagination
-        pagination = Pagination(
-            query=None, items=filtered[(page - 1) * per_page:page * per_page],
-            page=page, per_page=per_page, total=len(filtered),
-            pages=(len(filtered) + per_page - 1) // per_page,
+        pagination = _paginate_items(
+            [item for item in all_items if _has_no_stock(item)],
+            page=page,
+            per_page=per_page,
         )
-        primitives = pagination.items
     else:
         pagination = query.order_by(Primitive.id).paginate(page=page, per_page=per_page, error_out=False)
-        primitives = pagination.items
+    primitives = pagination.items
 
     return render_template("primitives.html", primitives=primitives, pagination=pagination,
                            q=q, no_stock=no_stock)
@@ -553,7 +566,7 @@ def primitives_import() -> Response:
 @admin_bp.route("/groups")
 @admin_required
 def groups_list() -> str:
-    get_user_groups()
+    get_user_groups()  # создаёт группы по умолчанию при первом посещении
     q = request.args.get("q", "").strip()
     active = request.args.get("active")
 

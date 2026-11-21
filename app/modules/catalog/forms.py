@@ -3,8 +3,8 @@
 from flask_wtf import FlaskForm
 
 from app.extensions import db
-from wtforms import BooleanField, DecimalField, FloatField, HiddenField, IntegerField, StringField, SubmitField, TextAreaField, SelectField, SelectMultipleField, FieldList, FormField
-from wtforms.validators import DataRequired, Length, NumberRange, Optional, URL
+from wtforms import BooleanField, DecimalField, FloatField, HiddenField, IntegerField, StringField, SubmitField, TextAreaField, SelectField, FieldList, FormField
+from wtforms.validators import DataRequired, Length, NumberRange, Optional, URL, ValidationError
 from flask_wtf.file import FileField, MultipleFileField
 
 
@@ -29,7 +29,7 @@ class PrimitiveLineForm(FlaskForm):
     def validate_primitive_id(self, field):
         value = (field.data or "").strip()
         if not value:
-            raise ValueError("Выберите примитив из списка.")
+            raise ValidationError("Выберите примитив из списка.")
         from app.modules.catalog.models import Primitive
         # Поддержка формата "sku — name" или просто sku/name/id
         pid = None
@@ -45,7 +45,7 @@ class PrimitiveLineForm(FlaskForm):
                 # поиск по частичному совпадению названия
                 prim = Primitive.query.filter(Primitive.name.ilike(f"%{value}%")).first()
         if prim is None:
-            raise ValueError("Примитив не найден.")
+            raise ValidationError("Примитив не найден.")
         # Сохраняем id в data для сервиса
         field.data = str(prim.id)
 

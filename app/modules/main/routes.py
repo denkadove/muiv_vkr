@@ -1,6 +1,6 @@
 """Маршруты основной части приложения."""
 
-from flask import Flask, Response, redirect, render_template, request, url_for
+from flask import Flask, render_template, request
 from flask_login import login_required
 
 from app.modules.catalog.models import Product
@@ -22,10 +22,6 @@ def register_routes(app: Flask) -> None:
         page = request.args.get("page", 1, type=int)
         pagination = Product.query.order_by(Product.id).paginate(page=page, per_page=20, error_out=False)
         return render_template("index.html", products=pagination.items, pagination=pagination)
-
-    @app.route("/index")
-    def index_alias() -> Response:
-        return redirect(url_for("index"))
 
     @app.route("/profile")
     @login_required

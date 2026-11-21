@@ -26,7 +26,6 @@ def create_app() -> Flask:
 
     from app.modules.admin import admin_bp
     from app.modules.auth import auth_bp
-    from app.modules.catalog import catalog_bp
     from app.modules.main import main_bp
     from app.modules.settings import settings_bp
 
@@ -43,7 +42,6 @@ def create_app() -> Flask:
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
-    app.register_blueprint(catalog_bp)
     app.register_blueprint(settings_bp)
 
     @login_manager.user_loader

@@ -1,7 +1,9 @@
 """Сервисный слой каталога: бизнес-логика, независимая от HTTP."""
 
 import os
+import urllib.parse
 import urllib.request
+import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
@@ -18,6 +20,122 @@ from app.modules.catalog.models import (
     ProductMarketplace,
     product_primitives,
 )
+
+MAX_PRODUCT_IMAGES = 10
+MAX_FEED_SIZE = 50 * 1024 * 1024
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+ALLOWED_CERT_EXTENSIONS = {"pdf", "png", "jpg", "jpeg"}
+
+
+def _upload_dir() -> str:
+    """Возвращает директорию загрузок товара (создаёт её при необходимости)."""
+    from flask import current_app
+
+    path = os.path.join(current_app.root_path, "static", "uploads", "products")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def _save_product_images(product_id: int, files, existing_count: int = 0) -> None:
+    """Сохраняет новые фото товара, не превышая лимит и сохраняя порядок."""
+    for file in files:
+        if existing_count >= MAX_PRODUCT_IMAGES:
+            break
+        if not file or not file.filename:
+            continue
+        ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+        if ext not in ALLOWED_IMAGE_EXTENSIONS:
+            continue
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        file.save(os.path.join(_upload_dir(), filename))
+        db.session.add(ProductImage(
+            product_id=product_id,
+            filename=filename,
+            is_main=(existing_count == 0),
+            sort_order=existing_count,
+        ))
+        existing_count += 1
+
+
+def _save_certificate(product: Product, certificate) -> None:
+    """Сохраняет сертификат, если он был загружен."""
+    if not certificate or not certificate.filename:
+        return
+    ext = certificate.filename.rsplit(".", 1)[-1].lower() if "." in certificate.filename else ""
+    if ext not in ALLOWED_CERT_EXTENSIONS:
+        return
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    certificate.save(os.path.join(_upload_dir(), filename))
+    product.certificate = filename
+
+
+def _form_lines(form, field: str) -> list:
+    """Возвращает строки FieldList формы (или пустой список)."""
+    container = getattr(form, field, None)
+    return container.data if container is not None else []
+
+
+def _line_value(line, field: str):
+    """Читает поле строки формы независимо от её типа."""
+    return line.get(field) if isinstance(line, dict) else getattr(line, field, None)
+
+
+def _apply_product_fields(product: Product, form: ProductForm, category: Category) -> None:
+    """Переносит общие поля формы в товар."""
+    barcode = form.barcode.data.strip() if form.barcode.data else ""
+    product.name = form.name.data
+    product.sku = form.sku.data.strip() if form.sku.data else None
+    product.barcode = int(barcode) if barcode else None
+    product.selling_price = form.selling_price.data
+    product.weight = form.weight.data
+    product.length = form.length.data
+    product.width = form.width.data
+    product.height = form.height.data
+    product.brand = form.brand.data.strip() if form.brand.data else None
+    product.country = form.country.data.strip() if form.country.data else None
+    product.warranty = form.warranty.data.strip() if form.warranty.data else None
+    product.video_url = form.video_url.data.strip() if form.video_url.data else None
+    product.description = form.description.data
+    product.active = form.active.data
+    product.category_id = category.id
+
+
+def _sync_marketplace_links(product_id: int, lines: list) -> None:
+    """Полностью пересоздаёт связи товара с маркетплейсами."""
+    ProductMarketplace.query.filter_by(product_id=product_id).delete()
+    for line in lines:
+        mp_id = _line_value(line, "marketplace_id")
+        if not mp_id:
+            continue
+        db.session.add(ProductMarketplace(
+            product_id=product_id,
+            marketplace_id=int(mp_id),
+            status=_line_value(line, "status") or "x",
+        ))
+
+
+def _sync_composition(product_id: int, lines: list) -> None:
+    """Полностью пересоздаёт состав товара."""
+    if not lines:
+        raise ValueError("Товар должен состоять хотя бы из одного примитива.")
+    db.session.execute(
+        product_primitives.delete().where(product_primitives.c.product_id == product_id)
+    )
+    for line in lines:
+        primitive_id = _line_value(line, "primitive_id")
+        if not primitive_id:
+            continue
+        primitive = db.session.get(Primitive, int(primitive_id))
+        if primitive is None:
+            raise ValueError("Указан несуществующий примитив.")
+        qty = int(_line_value(line, "quantity") or 1)
+        if qty < 1:
+            raise ValueError("Количество примитива должно быть не меньше 1.")
+        db.session.execute(
+            product_primitives.insert().values(
+                product_id=product_id, primitive_id=primitive.id, quantity=qty
+            )
+        )
 
 
 def get_categories() -> list[Category]:
@@ -102,88 +220,27 @@ def delete_category(category_id: int) -> None:
 
 def create_product(form: ProductForm) -> Product:
     """Создаёт товар."""
+    from flask import request
+
     category: Category | None = db.session.get(Category, form.category_id.data)
     if category is None:
         raise ValueError("Указанная категория не существует.")
 
-    mp_statuses = getattr(form, "marketplace_statuses", None)
-    mp_lines = mp_statuses.data if mp_statuses is not None else []
-
-    composition = getattr(form, "composition", None)
-    lines = composition.data if composition is not None else []
+    lines = _form_lines(form, "composition")
     if not lines:
         raise ValueError("Товар должен состоять хотя бы из одного примитива.")
 
-    barcode = form.barcode.data.strip() if form.barcode.data else None
-    product = Product(
-        name=form.name.data,
-        sku=form.sku.data.strip() if form.sku.data else None,
-        barcode=int(barcode) if barcode else None,
-        selling_price=form.selling_price.data,
-        weight=form.weight.data,
-        length=form.length.data,
-        width=form.width.data,
-        height=form.height.data,
-        brand=form.brand.data.strip() if form.brand.data else None,
-        country=form.country.data.strip() if form.country.data else None,
-        warranty=form.warranty.data.strip() if form.warranty.data else None,
-        video_url=form.video_url.data.strip() if form.video_url.data else None,
-        active=form.active.data,
-        description=form.description.data,
-        category_id=category.id,
-    )
+    product = Product()
+    _apply_product_fields(product, form, category)
     db.session.add(product)
     db.session.flush()
 
-    # Загрузка фото
-    from flask import current_app, request
-    import os, uuid
-    upload_dir = os.path.join(current_app.root_path, "static", "uploads", "products")
-    os.makedirs(upload_dir, exist_ok=True)
-    allowed_ext = {"png", "jpg", "jpeg", "gif", "webp"}
     files = request.files.getlist("images") if request.files else []
-    for i, f in enumerate(files[:10]):
-        if not f or not f.filename:
-            continue
-        ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
-        if ext not in allowed_ext:
-            continue
-        filename = f"{uuid.uuid4().hex}.{ext}"
-        f.save(os.path.join(upload_dir, filename))
-        db.session.add(ProductImage(product_id=product.id, filename=filename, is_main=(i == 0), sort_order=i))
+    _save_product_images(product.id, files)
+    _save_certificate(product, request.files.get("certificate") if request.files else None)
 
-    # Загрузка сертификата
-    cert = request.files.get("certificate") if request.files else None
-    if cert and cert.filename:
-        ext = cert.filename.rsplit(".", 1)[-1].lower() if "." in cert.filename else ""
-        if ext in {"pdf", "png", "jpg", "jpeg"}:
-            filename = f"{uuid.uuid4().hex}.{ext}"
-            cert.save(os.path.join(upload_dir, filename))
-            product.certificate = filename
-
-    for line in mp_lines:
-        mp_id = line.get("marketplace_id") if isinstance(line, dict) else getattr(line, "marketplace_id", None)
-        status = line.get("status") if isinstance(line, dict) else getattr(line, "status", None)
-        if not mp_id:
-            continue
-        db.session.add(ProductMarketplace(product_id=product.id, marketplace_id=int(mp_id), status=status or "x"))
-
-    for line in lines:
-        primitive_id = line.get("primitive_id") if isinstance(line, dict) else getattr(line, "primitive_id", None)
-        quantity = line.get("quantity") if isinstance(line, dict) else getattr(line, "quantity", None)
-        if not primitive_id:
-            continue
-        primitive = db.session.get(Primitive, int(primitive_id))
-        if primitive is None:
-            raise ValueError("Указан несуществующий примитив.")
-        qty = int(quantity or 1)
-        if qty < 1:
-            raise ValueError("Количество примитива должно быть не меньше 1.")
-        db.session.execute(
-            product_primitives.insert().values(
-                product_id=product.id, primitive_id=primitive.id, quantity=qty
-            )
-        )
+    _sync_marketplace_links(product.id, _form_lines(form, "marketplace_statuses"))
+    _sync_composition(product.id, lines)
 
     db.session.commit()
     return product
@@ -191,6 +248,8 @@ def create_product(form: ProductForm) -> Product:
 
 def update_product(product_id: int, form: ProductForm) -> Product:
     """Обновляет товар."""
+    from flask import request
+
     product: Product | None = db.session.get(Product, product_id)
     if product is None:
         raise LookupError("Товар не найден.")
@@ -198,101 +257,31 @@ def update_product(product_id: int, form: ProductForm) -> Product:
     if category is None:
         raise ValueError("Указанная категория не существует.")
 
-    mp_statuses = getattr(form, "marketplace_statuses", None)
-    mp_lines = mp_statuses.data if mp_statuses is not None else []
-
-    product.name = form.name.data
-    product.active = form.active.data
-    product.sku = form.sku.data.strip() if form.sku.data else None
-    product.barcode = int(form.barcode.data.strip()) if form.barcode.data and form.barcode.data.strip() else None
-    product.selling_price = form.selling_price.data
-    product.weight = form.weight.data
-    product.length = form.length.data
-    product.width = form.width.data
-    product.height = form.height.data
-    product.brand = form.brand.data.strip() if form.brand.data else None
-    product.country = form.country.data.strip() if form.country.data else None
-    product.warranty = form.warranty.data.strip() if form.warranty.data else None
-    product.video_url = form.video_url.data.strip() if form.video_url.data else None
-    product.description = form.description.data
-    product.category_id = category.id
-
-    # Загрузка новых фото
-    from flask import current_app, request
-    import os, uuid
-    upload_dir = os.path.join(current_app.root_path, "static", "uploads", "products")
-    os.makedirs(upload_dir, exist_ok=True)
-    allowed_ext = {"png", "jpg", "jpeg", "gif", "webp"}
-    files = request.files.getlist("images") if request.files else []
-    existing_count = ProductImage.query.filter_by(product_id=product.id).count() if False else len(product.images)
-    for i, f in enumerate(files):
-        if existing_count + i >= 10:
-            break
-        if not f or not f.filename:
-            continue
-        ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
-        if ext not in allowed_ext:
-            continue
-        filename = f"{uuid.uuid4().hex}.{ext}"
-        f.save(os.path.join(upload_dir, filename))
-        db.session.add(ProductImage(product_id=product.id, filename=filename, is_main=(len(product.images) == 0), sort_order=len(product.images)))
-
-    # Загрузка сертификата (заменяет старый)
-    cert = request.files.get("certificate") if request.files else None
-    if cert and cert.filename:
-        ext = cert.filename.rsplit(".", 1)[-1].lower() if "." in cert.filename else ""
-        if ext in {"pdf", "png", "jpg", "jpeg"}:
-            filename = f"{uuid.uuid4().hex}.{ext}"
-            cert.save(os.path.join(upload_dir, filename))
-            product.certificate = filename
-
-    # Обновляем связи с маркетплейсами
-    ProductMarketplace.query.filter_by(product_id=product.id).delete()
-    for line in mp_lines:
-        mp_id = line.get("marketplace_id") if isinstance(line, dict) else getattr(line, "marketplace_id", None)
-        status = line.get("status") if isinstance(line, dict) else getattr(line, "status", None)
-        if not mp_id:
-            continue
-        db.session.add(ProductMarketplace(product_id=product.id, marketplace_id=int(mp_id), status=status or "x"))
-
-    # Обновляем состав
-    db.session.execute(
-        product_primitives.delete().where(product_primitives.c.product_id == product.id)
-    )
-    composition = getattr(form, "composition", None)
-    lines = composition.data if composition is not None else []
+    lines = _form_lines(form, "composition")
     if not lines:
         raise ValueError("Товар должен состоять хотя бы из одного примитива.")
-    for line in lines:
-        primitive_id = line.get("primitive_id") if isinstance(line, dict) else getattr(line, "primitive_id", None)
-        quantity = line.get("quantity") if isinstance(line, dict) else getattr(line, "quantity", None)
-        if not primitive_id:
-            continue
-        primitive = db.session.get(Primitive, int(primitive_id))
-        if primitive is None:
-            raise ValueError("Указан несуществующий примитив.")
-        qty = int(quantity or 1)
-        if qty < 1:
-            raise ValueError("Количество примитива должно быть не меньше 1.")
-        db.session.execute(
-            product_primitives.insert().values(
-                product_id=product.id, primitive_id=primitive.id, quantity=qty
-            )
-        )
+
+    _apply_product_fields(product, form, category)
+
+    files = request.files.getlist("images") if request.files else []
+    existing_count = ProductImage.query.filter_by(product_id=product.id).count()
+    _save_product_images(product.id, files, existing_count=existing_count)
+    _save_certificate(product, request.files.get("certificate") if request.files else None)
+
+    _sync_marketplace_links(product.id, _form_lines(form, "marketplace_statuses"))
+    _sync_composition(product.id, lines)
 
     db.session.commit()
-    cleanup_unused_primitives()
     return product
 
 
 def delete_product(product_id: int) -> None:
-    """Удаляет товар и очищает неиспользуемые примитивы."""
+    """Удаляет товар."""
     product: Product | None = db.session.get(Product, product_id)
     if product is None:
         raise LookupError("Товар не найден.")
     db.session.delete(product)
     db.session.commit()
-    cleanup_unused_primitives()
 
 
 def create_marketplace(form: MarketplaceForm) -> Marketplace:
@@ -398,14 +387,6 @@ def delete_primitive(primitive_id: int) -> None:
     db.session.commit()
 
 
-def cleanup_unused_primitives() -> None:
-    """Удаляет примитивы, не используемые ни в одном товаре."""
-    unused = Primitive.query.filter(~Primitive.products.any()).all()
-    for p in unused:
-        db.session.delete(p)
-    db.session.commit()
-
-
 def _to_int(value) -> int:
     try:
         return int(value)
@@ -418,6 +399,43 @@ def _to_float(value) -> float:
         return float(str(value).replace(",", "."))
     except (TypeError, ValueError):
         return 0.0
+
+
+PRICE_FEED_FIELDS = {
+    "price_208_rub": _to_float,
+    "price_208_usd": _to_float,
+    "price_213_rub": _to_float,
+    "price_213_usd": _to_float,
+    "price_004_rub": _to_float,
+    "price_004_usd": _to_float,
+}
+STOCK_FEED_FIELDS = (
+    "remainder_ism_spb_tp_73",
+    "remainder_ism_spb_tp_reserve_73",
+    "remainder_msk_salarevo_278",
+    "remainder_msk_salarevo_reserve_278",
+    "remainder_osha_spb_tp_305",
+    "remainder_osha_spb_tp_reserve_305",
+    "remainder_svh_179",
+    "remainder_svh_reserve_179",
+    "remainder_bsho_spb_tp_2",
+    "remainder_bsho_spb_tp_reserve_2",
+)
+
+
+def _download_feed(feed_url: str, file_path: str) -> None:
+    """Скачивает фид с ограничением размера и таймаутом."""
+    parsed = urllib.parse.urlparse(feed_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("Недопустимый URL фида: разрешены только http и https.")
+
+    with urllib.request.urlopen(feed_url, timeout=30) as response:
+        data = response.read(MAX_FEED_SIZE + 1)
+    if len(data) > MAX_FEED_SIZE:
+        raise ValueError("Фид слишком большой (более 50 МБ).")
+
+    with open(file_path, "wb") as feed_file:
+        feed_file.write(data)
 
 
 def import_primitives_from_feed(feed_url: str) -> tuple[int, int, str]:
@@ -437,7 +455,7 @@ def import_primitives_from_feed(feed_url: str) -> tuple[int, int, str]:
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     file_path = os.path.join(logs_dir, f"{timestamp}_primitives.xml")
 
-    urllib.request.urlretrieve(feed_url, file_path)
+    _download_feed(feed_url, file_path)
 
     tree = ET.parse(file_path)
     root = tree.getroot()
@@ -452,13 +470,12 @@ def import_primitives_from_feed(feed_url: str) -> tuple[int, int, str]:
 
         offer_id = _to_int(get("offer_id"))
         product_id = _to_int(get("product_id"))
-        name = get("name") or ""
+        if not offer_id and not product_id:
+            continue
         sku = str(offer_id) if offer_id else str(product_id)
 
-        price_004_usd = _to_float(get("price_004_usd"))
-
-        remainder_tp = _to_int(get("remainder_ism_spb_tp_73"))
-        remainder_tp_reserve = _to_int(get("remainder_ism_spb_tp_reserve_73"))
+        price_only = get("update_price_only") == "true"
+        stock_only = get("update_stock_only") == "true"
 
         primitive = Primitive.query.filter_by(sku=sku).first()
         is_new = primitive is None
@@ -466,29 +483,23 @@ def import_primitives_from_feed(feed_url: str) -> tuple[int, int, str]:
             primitive = Primitive(sku=sku)
             db.session.add(primitive)
 
+        # Оба флага вместе или оба отсутствуют означают полное обновление.
+        full_update = is_new or price_only == stock_only
+
         primitive.site_id = product_id
         primitive.product_id = product_id
-        primitive.name = name
-        primitive.url = get("url")
-        primitive.price_208_rub = _to_float(get("price_208_rub"))
-        primitive.price_208_usd = _to_float(get("price_208_usd"))
-        primitive.price_213_rub = _to_float(get("price_213_rub"))
-        primitive.price_213_usd = _to_float(get("price_213_usd"))
-        primitive.price_004_rub = _to_float(get("price_004_rub"))
-        primitive.price_004_usd = price_004_usd
-        primitive.update_price_only = get("update_price_only") == "true"
-        primitive.update_stock_only = get("update_stock_only") == "true"
-        primitive.remainder_ism_spb_tp_73 = remainder_tp
-        primitive.remainder_ism_spb_tp_reserve_73 = remainder_tp_reserve
-        primitive.remainder_msk_salarevo_278 = _to_int(get("remainder_msk_salarevo_278"))
-        primitive.remainder_msk_salarevo_reserve_278 = _to_int(get("remainder_msk_salarevo_reserve_278"))
-        primitive.remainder_osha_spb_tp_305 = _to_int(get("remainder_osha_spb_tp_305"))
-        primitive.remainder_osha_spb_tp_reserve_305 = _to_int(get("remainder_osha_spb_tp_reserve_305"))
-        primitive.remainder_svh_179 = _to_int(get("remainder_svh_179"))
-        primitive.remainder_svh_reserve_179 = _to_int(get("remainder_svh_reserve_179"))
-        primitive.remainder_bsho_spb_tp_2 = _to_int(get("remainder_bsho_spb_tp_2"))
-        primitive.remainder_bsho_spb_tp_reserve_2 = _to_int(get("remainder_bsho_spb_tp_reserve_2"))
-        primitive.price = price_004_usd
+        if full_update:
+            primitive.name = get("name") or ""
+            primitive.url = get("url")
+            primitive.update_price_only = price_only
+            primitive.update_stock_only = stock_only
+        if full_update or price_only:
+            for field, converter in PRICE_FEED_FIELDS.items():
+                setattr(primitive, field, converter(get(field)))
+            primitive.price = primitive.price_004_usd or 0
+        if full_update or stock_only:
+            for field in STOCK_FEED_FIELDS:
+                setattr(primitive, field, _to_int(get(field)))
         primitive.updated_at = datetime.now(timezone.utc)
         if is_new:
             primitive.created_at = datetime.now(timezone.utc)

@@ -1,6 +1,7 @@
 """Конфигурация приложения."""
 
 import os
+import secrets
 
 
 class Config:
@@ -12,8 +13,8 @@ class Config:
     SQLALCHEMY_DATABASE_URI = (
         os.environ.get("SQLALCHEMY_DATABASE_URI") or "sqlite:///site.db"
     )
-    # Ключ подписи сессий и CSRF
-    # TODO: временный dev-ключ — в эксплуатации задавать переменной окружения
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-key-change-before-production"
+    # Ключ подписи сессий и CSRF. Без SECRET_KEY генерируется случайный ключ:
+    # сессии сбрасываются при перезапуске, но в коде нет известного dev-ключа.
+    SECRET_KEY = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
 
     # Константы перенесены в app/modules/settings/constants.py

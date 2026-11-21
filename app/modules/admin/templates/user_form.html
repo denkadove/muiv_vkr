@@ -27,7 +27,7 @@
             </div>
             {% endif %}
         </div>
-        {% if form.confirm_password %}
+        {% if form.password %}
         <div class="form-group">
             {{ form.password.label(class="form-label") }} {{ form.password(class="form-control") }}
             {% if form.password.errors %}

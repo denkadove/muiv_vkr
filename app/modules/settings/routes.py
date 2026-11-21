@@ -2,7 +2,6 @@
 
 from flask import flash, redirect, render_template, url_for
 
-from app.extensions import db
 from app.modules.auth.decorators import admin_required
 from app.modules.settings import settings_bp
 from app.modules.settings.forms import SettingsForm

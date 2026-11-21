@@ -25,7 +25,7 @@ def login() -> Response | str:
                 return render_template("login.html", form=form)
             session.pop("impersonator_id", None)
             session.pop("impersonated_user_id", None)
-            login_user(user)
+            login_user(user, remember=form.remember_me.data)
             flash(f"Добро пожаловать, {user.username}!", "success")
             return redirect(url_for("index"))
         else:

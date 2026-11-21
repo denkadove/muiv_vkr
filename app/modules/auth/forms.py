@@ -4,8 +4,6 @@ from flask_wtf import FlaskForm
 from wtforms import BooleanField, PasswordField, StringField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length
 
-from app.modules.settings.constants import GROUP_CHOICES
-
 
 class RegisterForm(FlaskForm):
     """Регистрация: логин, email, пароли, согласие на обработку данных."""

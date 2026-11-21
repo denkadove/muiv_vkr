@@ -6,13 +6,13 @@
         <a class="btn btn-primary" href="{{ url_for('admin.product_create') }}">Создать товар</a>
     </div>
 
-    {% set _targs = request.args.to_dict() %}
-    {% set _ = _targs.pop('tab', None) %}
-    {% set _ = _targs.pop('page', None) %}
+    {% set filter_args = request.args.to_dict() %}
+    {% set _ = filter_args.pop('tab', None) %}
+    {% set _ = filter_args.pop('page', None) %}
     <div class="tabs">
-        <a class="tab-link {{ 'active' if tab == 'prices' }}" href="{{ url_for('admin.products_list', tab='prices', **_targs) }}">Цены</a>
-        <a class="tab-link {{ 'active' if tab == 'stock' }}" href="{{ url_for('admin.products_list', tab='stock', **_targs) }}">Остатки</a>
-        <a class="tab-link {{ 'active' if tab == 'placement' }}" href="{{ url_for('admin.products_list', tab='placement', **_targs) }}">Размещения</a>
+        <a class="tab-link {{ 'active' if tab == 'prices' }}" href="{{ url_for('admin.products_list', tab='prices', **filter_args) }}">Цены</a>
+        <a class="tab-link {{ 'active' if tab == 'stock' }}" href="{{ url_for('admin.products_list', tab='stock', **filter_args) }}">Остатки</a>
+        <a class="tab-link {{ 'active' if tab == 'placement' }}" href="{{ url_for('admin.products_list', tab='placement', **filter_args) }}">Размещения</a>
     </div>
 
     <form method="GET" class="filter-form">

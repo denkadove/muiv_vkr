@@ -14,8 +14,3 @@ GROUP_CHOICES: list[tuple[int, str]] = [
     (ADMIN_GROUP_ID, "Администратор"),
     (USER_GROUP_ID, "Пользователь"),
 ]
-
-CATEGORY_CHOICES: list[tuple[int, str]] = [
-    (1, "Мелкогаборит"),
-    (2, "Крупногабарит"),
-]

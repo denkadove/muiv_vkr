@@ -1,57 +1,25 @@
 """Утилиты для построения хлебных крошек."""
 
-from flask import url_for, request
+import importlib
+
+from flask import request, url_for
 
 from app.extensions import db
-
-SECTION_NAMES = {
-    "users": "Пользователи",
-    "groups": "Группы",
-    "products": "Товары",
-    "categories": "Категории",
-    "marketplaces": "Маркетплейсы",
-    "primitives": "Примитивы",
-}
-
-SINGULAR_NAMES = {
-    "users": "пользователя",
-    "groups": "группы",
-    "products": "товара",
-    "categories": "категории",
-    "marketplaces": "маркетплейса",
-    "primitives": "примитива",
-}
+from app.registry import get_breadcrumb_sections
 
 
 def _get_object_name(section: str, obj_id: int) -> str:
-    """Возвращает отображаемое имя объекта по разделу и id."""
-    try:
-        if section == "users":
-            from app.modules.auth.models import User
-            obj = db.session.get(User, obj_id)
-            return obj.username if obj else f"#{obj_id}"
-        if section == "groups":
-            from app.modules.auth.models import UserGroup
-            obj = db.session.get(UserGroup, obj_id)
-            return obj.name if obj else f"#{obj_id}"
-        if section == "products":
-            from app.modules.catalog.models import Product
-            obj = db.session.get(Product, obj_id)
-            return obj.name if obj else f"#{obj_id}"
-        if section == "categories":
-            from app.modules.catalog.models import Category
-            obj = db.session.get(Category, obj_id)
-            return obj.name if obj else f"#{obj_id}"
-        if section == "marketplaces":
-            from app.modules.catalog.models import Marketplace
-            obj = db.session.get(Marketplace, obj_id)
-            return obj.name if obj else f"#{obj_id}"
-        if section == "primitives":
-            from app.modules.catalog.models import Primitive
-            obj = db.session.get(Primitive, obj_id)
-            return obj.name if obj else f"#{obj_id}"
-    except Exception:
-        pass
+    """Возвращает отображаемое имя объекта по описанию раздела и id."""
+    meta = get_breadcrumb_sections().get(section)
+    if meta is not None and meta.model is not None:
+        try:
+            module_path, class_name = meta.model.rsplit(".", 1)
+            model = getattr(importlib.import_module(module_path), class_name)
+            obj = db.session.get(model, obj_id)
+            if obj is not None:
+                return getattr(obj, meta.name_field) or f"#{obj_id}"
+        except Exception:
+            pass
     return f"#{obj_id}"
 
 
@@ -66,34 +34,34 @@ def _endpoint_exists(endpoint: str) -> bool:
 def build_breadcrumbs():
     """Формирует список хлебных крошек на основе текущего URL."""
     breadcrumbs = [{"name": "Главная", "url": url_for("index")}]
+    sections = get_breadcrumb_sections()
 
     path = request.path.strip("/")
 
-    if path.startswith("admin"):
-        parts = path.split("/")
-        # /admin/users/123/edit -> ['admin', 'users', '123', 'edit']
-        if len(parts) >= 2:
-            section = parts[1]
-            if section in SECTION_NAMES:
-                breadcrumbs.append({
-                    "name": SECTION_NAMES[section],
-                    "url": url_for(f"admin.{section}_list") if _endpoint_exists(f"admin.{section}_list") else None,
-                })
+    parts = path.split("/") if path else []
+    # /admin/users/123/edit -> ['admin', 'users', '123', 'edit']
+    # расширение с собственным префиксом -> ['reports', '123', 'edit']
+    offset = 1 if parts and parts[0] == "admin" else 0
+    meta = sections.get(parts[offset]) if len(parts) > offset else None
 
-        if len(parts) >= 3:
-            action = parts[2]
+    if meta is not None:
+        breadcrumbs.append({
+            "name": meta.name,
+            "url": url_for(meta.endpoint) if _endpoint_exists(meta.endpoint) else None,
+        })
+
+        if len(parts) > offset + 1:
+            action = parts[offset + 1]
             if action == "create":
-                name = f"Создание {SINGULAR_NAMES.get(parts[1], 'объекта')}"
-                breadcrumbs.append({"name": name, "url": None})
+                breadcrumbs.append({"name": f"Создание {meta.singular}", "url": None})
             elif action.isdigit():
-                name = _get_object_name(parts[1], int(action))
-                singular = SINGULAR_NAMES.get(parts[1], "объекта")
-                # Если есть четвёртая часть (edit) — показываем «Редактирование ...: имя»
-                if len(parts) >= 4 and parts[3] == "edit":
-                    name = f"Редактирование {singular}: {name}"
+                name = _get_object_name(parts[offset], int(action))
+                # '/admin/products/1/edit' -> показываем «Редактирование ...: имя»
+                if len(parts) > offset + 2 and parts[offset + 2] == "edit":
+                    name = f"Редактирование {meta.singular}: {name}"
                 breadcrumbs.append({"name": name, "url": None})
 
-    elif path.startswith("auth"):
+    if path.startswith("auth"):
         parts = path.split("/")
         if len(parts) >= 2:
             action = parts[1]

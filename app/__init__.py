@@ -1,10 +1,12 @@
 """Фабрика приложения: инициализация расширений и блюпринтов."""
 
+import importlib
 import os
 
 from flask import Flask, session
 
 from app.extensions import bcrypt, csrf, db, login_manager, migrate
+from app.registry import ADMIN_EXTENSIONS, get_admin_menu
 
 # Общие экземпляры расширений, привязываются к приложению в create_app
 
@@ -24,10 +26,8 @@ def create_app() -> Flask:
     login_manager.init_app(app)
     migrate.init_app(app, db)
 
-    from app.modules.admin import admin_bp
     from app.modules.auth import auth_bp
     from app.modules.main import main_bp
-    from app.modules.settings import settings_bp
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Войдите, чтобы получить доступ к этой странице."
@@ -35,14 +35,15 @@ def create_app() -> Flask:
 
     from app.modules.settings.constants import ADMIN_GROUP_ID
     from app.modules.auth.models import User
-    # Импорт моделей каталога для регистрации в SQLAlchemy
-    from app.modules.catalog import models as catalog_models
-    from app.modules.settings import models as settings_models
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
-    app.register_blueprint(admin_bp)
-    app.register_blueprint(settings_bp)
+
+    # Админка — хост: подключает расширения и их модели по реестру.
+    for extension in ADMIN_EXTENSIONS:
+        for model_module in extension.models:
+            importlib.import_module(model_module)
+        app.register_blueprint(extension.blueprint)
 
     @login_manager.user_loader
     def load_user(user_id: str) -> User | None:
@@ -51,6 +52,10 @@ def create_app() -> Flask:
     @app.context_processor
     def inject_admin_group_id() -> dict[str, int]:
         return {"ADMIN_GROUP_ID": ADMIN_GROUP_ID}
+
+    @app.context_processor
+    def inject_admin_menu() -> dict:
+        return {"admin_menu": get_admin_menu()}
 
     @app.context_processor
     def inject_impersonator() -> dict[str, User | None]:

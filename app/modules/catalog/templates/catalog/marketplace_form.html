@@ -40,6 +40,18 @@
         </div>
 
         <div class="form-group">
+            {{ form.client_id.label(class="form-label") }} {{ form.client_id(class="form-control") }}
+            {% if form.client_id.errors %}
+            <div class="error">
+                {% for error in form.client_id.errors %}
+                <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <small>Нужен для запросов к API Ozon вместе с Api-ключом.</small>
+        </div>
+
+        <div class="form-group">
             {{ form.description.label(class="form-label") }} {{ form.description(class="form-control") }}
             {% if form.description.errors %}
             <div class="error">
@@ -55,5 +67,5 @@
         </div>
     </form>
 
-    <p><a href="{{ url_for('admin.marketplaces_list') }}">← К списку маркетплейсов</a></p>
+    <p><a href="{{ url_for('catalog.marketplaces_list') }}">← К списку маркетплейсов</a></p>
 {% endblock %}

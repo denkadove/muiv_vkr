@@ -1,6 +1,7 @@
 alembic==1.20.1
 bcrypt==5.0.0
-blinker==1.9.0
+certifi==2026.11.20
+charset-normalizer==3.5.2
 cffi==2.1.1
 click==8.5.1
 cryptography==50.0.2
@@ -18,8 +19,10 @@ Jinja2==3.1.6
 Mako==1.4.3
 MarkupSafe==3.0.4
 pycparser==3.12
+requests==2.34.2
 SQLAlchemy==2.1.8
 typing_extensions==4.16.0
+urllib3==2.8.0
 Werkzeug==3.1.9
 WTForms==3.3.2
 WTForms-SQLAlchemy==0.4.2

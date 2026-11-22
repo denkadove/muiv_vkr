@@ -1,18 +1,19 @@
 {% extends "structure/admin_base.html" %}
 {% block title %}Товары — {{ config.APP_NAME }}{% endblock %}
+{% macro money(value) %}{% if value is not none %}{{ value }} ₽{% else %}—{% endif %}{% endmacro %}
 {% block admin_content %}
     <div class="page-header">
         <h2>Товары</h2>
-        <a class="btn btn-primary" href="{{ url_for('admin.product_create') }}">Создать товар</a>
+        <a class="btn btn-primary" href="{{ url_for('catalog.product_create') }}">Создать товар</a>
     </div>
 
     {% set filter_args = request.args.to_dict() %}
     {% set _ = filter_args.pop('tab', None) %}
     {% set _ = filter_args.pop('page', None) %}
     <div class="tabs">
-        <a class="tab-link {{ 'active' if tab == 'prices' }}" href="{{ url_for('admin.products_list', tab='prices', **filter_args) }}">Цены</a>
-        <a class="tab-link {{ 'active' if tab == 'stock' }}" href="{{ url_for('admin.products_list', tab='stock', **filter_args) }}">Остатки</a>
-        <a class="tab-link {{ 'active' if tab == 'placement' }}" href="{{ url_for('admin.products_list', tab='placement', **filter_args) }}">Размещения</a>
+        <a class="tab-link {{ 'active' if tab == 'prices' }}" href="{{ url_for('catalog.products_list', tab='prices', **filter_args) }}">Цены</a>
+        <a class="tab-link {{ 'active' if tab == 'stock' }}" href="{{ url_for('catalog.products_list', tab='stock', **filter_args) }}">Остатки</a>
+        <a class="tab-link {{ 'active' if tab == 'placement' }}" href="{{ url_for('catalog.products_list', tab='placement', **filter_args) }}">Размещения</a>
     </div>
 
     <form method="GET" class="filter-form">
@@ -24,13 +25,15 @@
             <option value="{{ c.id }}" {% if category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
             {% endfor %}
         </select>
-        {% if tab == 'placement' %}
+        {% if tab in ('prices', 'placement') %}
         <select name="marketplace_id" class="form-control">
             <option value="">Все магазины</option>
             {% for m in marketplaces %}
             <option value="{{ m.id }}" {% if marketplace_id == m.id %}selected{% endif %}>{{ m.short_name or m.name }}</option>
             {% endfor %}
         </select>
+        {% endif %}
+        {% if tab == 'placement' %}
         <select name="marketplace_status" class="form-control">
             <option value="">Любой статус</option>
             <option value="v" {% if marketplace_status == 'v' %}selected{% endif %}>Размещён</option>
@@ -46,6 +49,20 @@
         <button type="submit" class="btn btn-secondary btn-sm">Найти</button>
     </form>
 
+    {% if tab == 'prices' and ozon_marketplaces %}
+    <form method="POST" action="{{ url_for('catalog.import_ozon') }}" class="filter-form ozon-import-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <select name="marketplace_id" class="form-control">
+            <option value="">Все магазины Ozon</option>
+            {% for m in ozon_marketplaces %}
+            <option value="{{ m.id }}" {% if marketplace_id == m.id %}selected{% endif %}>{{ m.short_name or m.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary btn-sm">Обновить из Ozon</button>
+        <small>Нужны заполненные Client-Id, Api-Key и offer_id товара.</small>
+    </form>
+    {% endif %}
+
     {% if products %}
         <div class="table-wrap">
             <table class="data-table">
@@ -57,7 +74,7 @@
                         <th>Название</th>
                         <th>Вход</th>
                         <th>Продажа</th>
-                        <th>Категория</th>
+                        <th>Комиссия FBS</th>
                         {% elif tab == 'stock' %}
                         <th>Название</th>
                         <th>СПБ ТП</th>
@@ -65,7 +82,6 @@
                         <th>СПБ ОША</th>
                         <th>СПБ СВХ</th>
                         <th>СПБ БШО</th>
-                        <th>Категория</th>
                         {% else %}
                         <th>Штрихкод</th>
                         <th>Название</th>
@@ -81,6 +97,13 @@
                 </thead>
                 <tbody>
                     {% for product in products %}
+                    {% set ns = namespace(ozon=none) %}
+                    {% for link in product.marketplace_links %}
+                        {% if link.marketplace and link.marketplace.marketplace_type == ozon_type
+                                            and ns.ozon is none and (not marketplace_id or link.marketplace_id == marketplace_id) %}
+                            {% set ns.ozon = link %}
+                        {% endif %}
+                    {% endfor %}
                     <tr>
                         <td>{{ product.id }}</td>
                         <td>{{ product.sku or '—' }}</td>
@@ -88,7 +111,15 @@
                         <td>{{ product.name }}</td>
                         <td>{{ product.cost_price }}</td>
                         <td>{{ product.selling_price or '—' }}</td>
-                        <td>{{ product.category.name if product.category else 'Нет' }}</td>
+                        {% if ns.ozon %}
+                        <td class="ozon-commission">
+                            {% if ns.ozon.ozon_error %}<div class="error">{{ ns.ozon.ozon_error }}</div>{% endif %}
+                            <div>Мин.: {{ money(ns.ozon.fbs_commission_min) }}</div>
+                            <div>Макс.: {{ money(ns.ozon.fbs_commission_max) }}</div>
+                        </td>
+                        {% else %}
+                        <td>—</td>
+                        {% endif %}
                         {% elif tab == 'stock' %}
                         <td>{{ product.name }}</td>
                         <td>{{ product.stock_spb_tp }}</td>
@@ -96,7 +127,6 @@
                         <td>{{ product.stock_spb_osh }}</td>
                         <td>{{ product.stock_spb_svh }}</td>
                         <td>{{ product.stock_spb_bsho }}</td>
-                        <td>{{ product.category.name if product.category else 'Нет' }}</td>
                         {% else %}
                         <td>{{ product.barcode or '—' }}</td>
                         <td>{{ product.name }}</td>
@@ -110,9 +140,9 @@
                         {% endif %}
                         <td>
                             <div class="table-actions">
-                                <a class="btn btn-secondary btn-icon" title="Править" aria-label="Править" href="{{ url_for('admin.product_edit', product_id=product.id) }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></a>
+                                <a class="btn btn-secondary btn-icon" title="Править" aria-label="Править" href="{{ url_for('catalog.product_edit', product_id=product.id) }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></a>
                                 {% if current_user.group_id == ADMIN_GROUP_ID %}
-                                <form class="js-confirm" method="POST" action="{{ url_for('admin.product_delete', product_id=product.id) }}" data-confirm="Удалить товар {{ product.name }}?" data-confirm-btn="Удалить">
+                                <form class="js-confirm" method="POST" action="{{ url_for('catalog.product_delete', product_id=product.id) }}" data-confirm="Удалить товар {{ product.name }}?" data-confirm-btn="Удалить">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                                     <button type="submit" class="btn btn-danger btn-icon" title="Удалить" aria-label="Удалить"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
                                 </form>

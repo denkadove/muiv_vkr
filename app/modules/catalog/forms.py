@@ -12,6 +12,7 @@ class MarketplaceStatusForm(FlaskForm):
     """Строка статуса размещения на маркетплейсе."""
 
     marketplace_id = HiddenField()
+    external_offer_id = StringField("Offer ID", validators=[Length(max=255)])
     status = SelectField("Статус", choices=[
         ("v", "Размещён"),
         ("o", "На модерации"),
@@ -105,5 +106,6 @@ class MarketplaceForm(FlaskForm):
         ("WB", "WB"),
     ], validators=[DataRequired()])
     api_key = StringField("Api-ключ", validators=[DataRequired(), Length(max=255)])
+    client_id = StringField("Client-Id (Ozon)", validators=[Optional(), Length(max=255)])
     description = TextAreaField("Описание")
     submit = SubmitField("Сохранить")

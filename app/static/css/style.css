@@ -736,6 +736,19 @@ datalist option {
     gap: 10px;
 }
 
+/* 9.2 Импорт и комиссии Ozon на вкладке «Цены» */
+.ozon-import-form {
+    margin-bottom: 12px;
+}
+
+.ozon-import-form small {
+    color: var(--color-muted);
+}
+
+.ozon-commission {
+    white-space: nowrap;
+}
+
 /* 10. Планшет и выше */
 @media (min-width: 640px) {
     .site-header-inner {

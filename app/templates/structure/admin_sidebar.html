@@ -1,0 +1,16 @@
+{# Сайдбар админ-панели: разделы строятся из реестра расширений #}
+<nav class="admin-sidebar" aria-label="Навигация админ-панели">
+    {% for section in admin_menu %}
+    <details class="admin-menu-section" open>
+        <summary class="admin-menu-title">{{ section.title }}</summary>
+        <ul class="admin-menu-list">
+            {% for item in section.items %}
+            {% set is_active = request.endpoint in item.active_endpoints %}
+            <li>
+                <a class="admin-menu-link{{ ' is-active' if is_active else '' }}" {% if is_active %}aria-current="page"{% endif %} href="{{ url_for(item.endpoint) }}">{{ item.title }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endfor %}
+</nav>

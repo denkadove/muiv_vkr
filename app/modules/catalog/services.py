@@ -26,6 +26,20 @@ MAX_FEED_SIZE = 50 * 1024 * 1024
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 ALLOWED_CERT_EXTENSIONS = {"pdf", "png", "jpg", "jpeg"}
 
+# Импортированные из Ozon данные не должны теряться при редактировании товара.
+IMPORT_LINK_FIELDS = (
+    "external_offer_id",
+    "ozon_product_id",
+    "ozon_data",
+    "commission_fbo",
+    "commission_fbs",
+    "commission_fbp",
+    "commission_rfbs",
+    "ozon_price",
+    "ozon_updated_at",
+    "ozon_error",
+)
+
 
 def _upload_dir() -> str:
     """Возвращает директорию загрузок товара (создаёт её при необходимости)."""
@@ -101,16 +115,32 @@ def _apply_product_fields(product: Product, form: ProductForm, category: Categor
 
 
 def _sync_marketplace_links(product_id: int, lines: list) -> None:
-    """Полностью пересоздаёт связи товара с маркетплейсами."""
-    ProductMarketplace.query.filter_by(product_id=product_id).delete()
+    """Пересоздаёт связи товара, сохраняя offer_id и данные импорта из Ozon."""
+    existing = {
+        link.marketplace_id: {field: getattr(link, field) for field in IMPORT_LINK_FIELDS}
+        for link in ProductMarketplace.query.filter_by(product_id=product_id).all()
+    }
+    ProductMarketplace.query.filter_by(product_id=product_id).delete(
+        synchronize_session=False
+    )
+    product = db.session.get(Product, product_id)
+    if product is not None:
+        db.session.expire(product, ["marketplace_links"])
+
     for line in lines:
         mp_id = _line_value(line, "marketplace_id")
         if not mp_id:
             continue
+        mp_id = int(mp_id)
+        data = dict(existing.get(mp_id, {}))
+        data["external_offer_id"] = (
+            str(_line_value(line, "external_offer_id") or "").strip() or None
+        )
         db.session.add(ProductMarketplace(
             product_id=product_id,
-            marketplace_id=int(mp_id),
+            marketplace_id=mp_id,
             status=_line_value(line, "status") or "x",
+            **data,
         ))
 
 
@@ -290,6 +320,7 @@ def create_marketplace(form: MarketplaceForm) -> Marketplace:
         name=form.name.data,
         marketplace_type=form.marketplace_type.data,
         api_key=form.api_key.data,
+        client_id=(form.client_id.data or "").strip() or None,
         description=form.description.data,
     )
     db.session.add(marketplace)
@@ -310,6 +341,7 @@ def update_marketplace(marketplace_id: int, form: MarketplaceForm) -> Marketplac
     marketplace.name = form.name.data
     marketplace.marketplace_type = form.marketplace_type.data
     marketplace.api_key = form.api_key.data
+    marketplace.client_id = (form.client_id.data or "").strip() or None
     marketplace.description = form.description.data
     try:
         db.session.commit()

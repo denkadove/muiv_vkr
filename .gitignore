@@ -3,7 +3,7 @@ __pycache__/
 *.pyc
 .env
 instance/
-migrations/
+maigrations/
 .idea/
 PLAN.md
 *.plan

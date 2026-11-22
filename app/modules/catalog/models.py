@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 from app.extensions import db
+from app.modules.catalog.commission import calculate_fbs_commissions
 
 
 class Category(db.Model):
@@ -20,7 +21,7 @@ class Category(db.Model):
 
 
 class ProductMarketplace(db.Model):
-    """Связь товара и маркетплейса со статусом размещения."""
+    """Связь товара и маркетплейса: статус, артикул и данные из API Ozon."""
 
     __tablename__ = "product_marketplaces"
 
@@ -28,8 +29,35 @@ class ProductMarketplace(db.Model):
     marketplace_id = db.Column(db.Integer, db.ForeignKey("marketplaces.id"), primary_key=True)
     status = db.Column(db.String(10), nullable=False, default="x")
 
+    # Идентификатор товара в маркетплейсе (offer_id для Ozon)
+    external_offer_id = db.Column(db.String(255), nullable=True, index=True)
+
+    # Данные /v5/product/info/prices. ozon_data — полный ответ по товару,
+    # остальные поля — проекция для фильтрации, сортировки и таблицы.
+    ozon_product_id = db.Column(db.BigInteger, nullable=True)
+    ozon_data = db.Column(db.JSON, nullable=True)
+    commission_fbo = db.Column(db.Numeric(5, 2), nullable=True)
+    commission_fbs = db.Column(db.Numeric(5, 2), nullable=True)
+    commission_fbp = db.Column(db.Numeric(5, 2), nullable=True)
+    commission_rfbs = db.Column(db.Numeric(5, 2), nullable=True)
+    ozon_price = db.Column(db.Numeric(10, 2), nullable=True)
+    ozon_updated_at = db.Column(db.DateTime, nullable=True)
+    ozon_error = db.Column(db.String(255), nullable=True)
+
     product = db.relationship("Product", back_populates="marketplace_links")
     marketplace = db.relationship("Marketplace", back_populates="product_links")
+
+    @property
+    def fbs_commission_min(self):
+        """Минимальная итоговая комиссия FBS, ₽."""
+        price = self.product.selling_price if self.product else None
+        return calculate_fbs_commissions(self.ozon_data, price, self.commission_fbs)[0]
+
+    @property
+    def fbs_commission_max(self):
+        """Максимальная итоговая комиссия FBS, ₽."""
+        price = self.product.selling_price if self.product else None
+        return calculate_fbs_commissions(self.ozon_data, price, self.commission_fbs)[1]
 
 product_primitives = db.Table(
     "product_primitives",
@@ -166,6 +194,8 @@ class Marketplace(db.Model):
     marketplace_type = db.Column(db.String(50), nullable=False, default="Яндекс")
     description = db.Column(db.Text)
     api_key = db.Column(db.String(255), nullable=True, unique=True)
+    # Ozon требует два заголовка: Client-Id и Api-Key
+    client_id = db.Column(db.String(255), nullable=True)
     product_links = db.relationship("ProductMarketplace", back_populates="marketplace", cascade="all, delete-orphan")
 
 

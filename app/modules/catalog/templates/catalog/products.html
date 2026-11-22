@@ -1,6 +1,6 @@
 {% extends "structure/admin_base.html" %}
 {% block title %}Товары — {{ config.APP_NAME }}{% endblock %}
-{% macro money(value) %}{% if value is not none %}{{ value }} ₽{% else %}—{% endif %}{% endmacro %}
+{% from "structure/money.html" import price_pair, commission_pair with context %}
 {% block admin_content %}
     <div class="page-header">
         <h2>Товары</h2>
@@ -72,9 +72,9 @@
                         <th>SKU</th>
                         {% if tab == 'prices' %}
                         <th>Название</th>
-                        <th>Вход</th>
-                        <th>Продажа</th>
-                        <th>Комиссия FBS</th>
+                        <th>Вход, $ / ₽</th>
+                        <th>Продажа, $ / ₽</th>
+                        <th>Комиссия FBS, $ / ₽</th>
                         {% elif tab == 'stock' %}
                         <th>Название</th>
                         <th>СПБ ТП</th>
@@ -109,13 +109,13 @@
                         <td>{{ product.sku or '—' }}</td>
                         {% if tab == 'prices' %}
                         <td>{{ product.name }}</td>
-                        <td>{{ product.cost_price }}</td>
-                        <td>{{ product.selling_price or '—' }}</td>
+                        <td>{{ price_pair(product.cost_price, exchange_rate) }}</td>
+                        <td>{{ price_pair(product.selling_price, exchange_rate) }}</td>
                         {% if ns.ozon %}
                         <td class="ozon-commission">
                             {% if ns.ozon.ozon_error %}<div class="error">{{ ns.ozon.ozon_error }}</div>{% endif %}
-                            <div>Мин.: {{ money(ns.ozon.fbs_commission_min) }}</div>
-                            <div>Макс.: {{ money(ns.ozon.fbs_commission_max) }}</div>
+                            <div>Мин.: {{ commission_pair(ns.ozon.fbs_commission_min, exchange_rate) }}</div>
+                            <div>Макс.: {{ commission_pair(ns.ozon.fbs_commission_max, exchange_rate) }}</div>
                         </td>
                         {% else %}
                         <td>—</td>

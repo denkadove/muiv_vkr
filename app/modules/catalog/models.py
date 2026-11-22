@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from app.extensions import db
 from app.modules.catalog.commission import calculate_fbs_commissions
+from app.modules.catalog.pricing import get_exchange_rate, usd_to_rub
 
 
 class Category(db.Model):
@@ -47,17 +48,24 @@ class ProductMarketplace(db.Model):
     product = db.relationship("Product", back_populates="marketplace_links")
     marketplace = db.relationship("Marketplace", back_populates="product_links")
 
+    def _fbs_commission(self, index: int):
+        """Итоговая комиссия FBS в рублях; цена товара переводится из USD."""
+        rate = get_exchange_rate()
+        price = self.product.selling_price if self.product else None
+        rub_price = usd_to_rub(price, rate)
+        return calculate_fbs_commissions(
+            self.ozon_data, rub_price, self.commission_fbs
+        )[index]
+
     @property
     def fbs_commission_min(self):
         """Минимальная итоговая комиссия FBS, ₽."""
-        price = self.product.selling_price if self.product else None
-        return calculate_fbs_commissions(self.ozon_data, price, self.commission_fbs)[0]
+        return self._fbs_commission(0)
 
     @property
     def fbs_commission_max(self):
         """Максимальная итоговая комиссия FBS, ₽."""
-        price = self.product.selling_price if self.product else None
-        return calculate_fbs_commissions(self.ozon_data, price, self.commission_fbs)[1]
+        return self._fbs_commission(1)
 
 product_primitives = db.Table(
     "product_primitives",

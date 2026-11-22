@@ -1,0 +1,16 @@
+{# Пара цен: доллары из БД и рубли по текущему курсу. #}
+{% macro price_pair(usd, rate) %}
+{% if rate is none or usd is none %}—
+{% else %}
+{% set rub = usd_to_rub(usd, rate) %}
+<span class="price-usd">{{ '%.2f'|format(usd) }} $</span><span class="price-rub">{{ '%.2f'|format(rub) }} ₽</span>
+{% endif %}
+{% endmacro %}
+
+{% macro commission_pair(rub, rate) %}
+{% if rate is none or rub is none %}—
+{% else %}
+{% set usd = rub_to_usd(rub, rate) %}
+<span class="price-usd">{{ '%.2f'|format(usd) }} $</span><span class="price-rub">{{ '%.2f'|format(rub) }} ₽</span>
+{% endif %}
+{% endmacro %}

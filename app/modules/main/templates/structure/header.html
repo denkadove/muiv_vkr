@@ -41,6 +41,13 @@
     {% endif %}
 {% endwith %}
 
+{% if exchange_rate is none %}
+<div class="alert alert-error" role="alert">
+    Не задан курс доллара — цены не отображаются.
+    <a href="{{ url_for('settings.settings_edit') }}">Задать курс</a>
+</div>
+{% endif %}
+
 {% if impersonator and current_user.is_authenticated %}
 <div class="impersonation-banner">
     <span>Режим: вы работаете от имени <strong>{{ current_user.username }}</strong></span>

@@ -57,7 +57,7 @@ class ProductForm(FlaskForm):
     name = StringField("Название", validators=[DataRequired(), Length(max=255)])
     sku = StringField("Артикул (SKU)", validators=[Length(max=255)])
     barcode = StringField("Штрихкод", validators=[Length(max=32)])
-    selling_price = DecimalField("Цена продажи", validators=[Optional(), NumberRange(min=0)], places=2)
+    selling_price = DecimalField("Цена продажи, $", validators=[Optional(), NumberRange(min=0)], places=2)
     weight = FloatField("Вес, кг", validators=[Optional(), NumberRange(min=0)])
     length = FloatField("Длина, см", validators=[Optional(), NumberRange(min=0)])
     width = FloatField("Ширина, см", validators=[Optional(), NumberRange(min=0)])
@@ -92,7 +92,7 @@ class PrimitiveForm(FlaskForm):
 
     sku = StringField("Артикул (SKU)", validators=[DataRequired(), Length(max=255)])
     name = StringField("Название", validators=[DataRequired(), Length(max=255)])
-    price = DecimalField("Цена", validators=[DataRequired(), NumberRange(min=0)], places=2)
+    price = DecimalField("Цена, $", validators=[DataRequired(), NumberRange(min=0)], places=2)
     submit = SubmitField("Сохранить")
 
 

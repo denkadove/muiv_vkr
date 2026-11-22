@@ -736,6 +736,16 @@ datalist option {
     gap: 10px;
 }
 
+/* 9.1 Цены в двух валютах */
+.price-usd,
+.price-rub {
+    display: block;
+}
+
+.price-usd {
+    color: var(--color-muted);
+}
+
 /* 9.2 Импорт и комиссии Ozon на вкладке «Цены» */
 .ozon-import-form {
     margin-bottom: 12px;

@@ -10,3 +10,4 @@ class Setting(db.Model):
 
     key = db.Column(db.String(255), primary_key=True)
     value = db.Column(db.Text, nullable=True)
+    dollar_exchange_rate = db.Column(db.Float, nullable=True)

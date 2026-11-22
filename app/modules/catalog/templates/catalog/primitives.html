@@ -1,5 +1,6 @@
 {% extends "structure/admin_base.html" %}
 {% block title %}Примитивы — {{ config.APP_NAME }}{% endblock %}
+{% from "structure/money.html" import price_pair with context %}
 {% block admin_content %}
     <div class="page-header">
         <h2>Примитивы</h2>
@@ -26,7 +27,7 @@
                         <th>ID</th>
                         <th>Артикул</th>
                         <th>Название</th>
-                        <th>Цена</th>
+                        <th>Цена, $ / ₽</th>
                         <th>СПБ ТП</th>
                         <th>МСК</th>
                         <th>СПБ ОША</th>
@@ -47,7 +48,7 @@
                                 {{ primitive.name }}
                             {% endif %}
                         </td>
-                        <td>{{ primitive.price }}</td>
+                        <td>{{ price_pair(primitive.price, exchange_rate) }}</td>
                         <td>{{ primitive.stock_spb_tp }}</td>
                         <td>{{ primitive.stock_msk }}</td>
                         <td>{{ primitive.stock_spb_osh }}</td>

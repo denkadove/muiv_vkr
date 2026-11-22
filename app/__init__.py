@@ -69,6 +69,7 @@ def create_app() -> Flask:
     register_routes(app)
 
     from app.modules.breadcrumbs.utils import build_breadcrumbs
+    from app.modules.catalog.pricing import get_exchange_rate, rub_to_usd, usd_to_rub
     from app.modules.settings.services import get_setting
 
     @app.context_processor
@@ -79,5 +80,13 @@ def create_app() -> Flask:
     def inject_tiny_api_key() -> dict:
         key = get_setting("tiny_api_key") or os.environ.get("TINY_API_KEY") or "no-api-key"
         return {"tiny_api_key": key}
+
+    @app.context_processor
+    def inject_exchange_rate() -> dict:
+        return {
+            "exchange_rate": get_exchange_rate(),
+            "usd_to_rub": usd_to_rub,
+            "rub_to_usd": rub_to_usd,
+        }
 
     return app

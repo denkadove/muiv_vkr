@@ -74,7 +74,12 @@
                         <th>Название</th>
                         <th>Вход, $ / ₽</th>
                         <th>Продажа, $ / ₽</th>
-                        <th>Комиссия FBS, $ / ₽</th>
+                        <th>Комиссия FBS (мин), $ / ₽</th>
+                        <th>Комиссия FBS (макс), $ / ₽</th>
+                        <th>MIN наценка, $</th>
+                        <th>MAX наценка, $</th>
+                        <th>MIN наценка, %</th>
+                        <th>MAX наценка, %</th>
                         {% elif tab == 'stock' %}
                         <th>Название</th>
                         <th>СПБ ТП</th>
@@ -114,10 +119,22 @@
                         {% if ns.ozon %}
                         <td class="ozon-commission">
                             {% if ns.ozon.ozon_error %}<div class="error">{{ ns.ozon.ozon_error }}</div>{% endif %}
-                            <div>Мин.: {{ commission_pair(ns.ozon.fbs_commission_min, exchange_rate) }}</div>
-                            <div>Макс.: {{ commission_pair(ns.ozon.fbs_commission_max, exchange_rate) }}</div>
+                            <div>{{ commission_pair(ns.ozon.fbs_commission_min, exchange_rate) }}</div>
                         </td>
+                        <td class="ozon-commission">
+                            {% if ns.ozon.ozon_error %}<div class="error">{{ ns.ozon.ozon_error }}</div>{% endif %}
+                            <div>{{ commission_pair(ns.ozon.fbs_commission_max, exchange_rate) }}</div>
+                        </td>
+                        <td>{% if ns.ozon.markup_min_usd is none %}—{% else %}{{ '%.2f'|format(ns.ozon.markup_min_usd) }} ${% endif %}</td>
+                        <td>{% if ns.ozon.markup_max_usd is none %}—{% else %}{{ '%.2f'|format(ns.ozon.markup_max_usd) }} ${% endif %}</td>
+                        <td>{% if ns.ozon.markup_min_percent is none %}—{% else %}{{ '%.2f'|format(ns.ozon.markup_min_percent) }} %{% endif %}</td>
+                        <td>{% if ns.ozon.markup_max_percent is none %}—{% else %}{{ '%.2f'|format(ns.ozon.markup_max_percent) }} %{% endif %}</td>
                         {% else %}
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>—</td>
                         <td>—</td>
                         {% endif %}
                         {% elif tab == 'stock' %}

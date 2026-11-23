@@ -1,10 +1,12 @@
 """Модели каталога: категории, товары, маркетплейсы, примитивы."""
 
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from app.extensions import db
 from app.modules.catalog.commission import calculate_fbs_commissions
-from app.modules.catalog.pricing import get_exchange_rate, usd_to_rub
+from app.modules.catalog.pricing import get_exchange_rate, rub_to_usd, usd_to_rub
+from app.modules.catalog.values import as_decimal
 
 
 class Category(db.Model):
@@ -67,6 +69,45 @@ class ProductMarketplace(db.Model):
         """Максимальная итоговая комиссия FBS, ₽."""
         return self._fbs_commission(1)
 
+    @property
+    def markup_min_usd(self):
+        """Минимальная наценка в $ (при максимальной комиссии)."""
+        rate = get_exchange_rate()
+        selling = as_decimal(self.product.selling_price) if self.product else None
+        cost = as_decimal(self.product.cost_price) if self.product else None
+        commission_max = rub_to_usd(self.fbs_commission_max, rate)
+        if selling is None or cost is None or commission_max is None:
+            return None
+        return (selling - cost - commission_max).quantize(Decimal("0.01"))
+
+    @property
+    def markup_max_usd(self):
+        """Максимальная наценка в $ (при минимальной комиссии)."""
+        rate = get_exchange_rate()
+        selling = as_decimal(self.product.selling_price) if self.product else None
+        cost = as_decimal(self.product.cost_price) if self.product else None
+        commission_min = rub_to_usd(self.fbs_commission_min, rate)
+        if selling is None or cost is None or commission_min is None:
+            return None
+        return (selling - cost - commission_min).quantize(Decimal("0.01"))
+
+    @property
+    def markup_min_percent(self):
+        """Минимальная наценка в % от цены входа."""
+        cost = as_decimal(self.product.cost_price) if self.product else None
+        value = self.markup_min_usd
+        if cost is None or cost == 0 or value is None:
+            return None
+        return (value / cost * 100).quantize(Decimal("0.01"))
+
+    @property
+    def markup_max_percent(self):
+        """Максимальная наценка в % от цены входа."""
+        cost = as_decimal(self.product.cost_price) if self.product else None
+        value = self.markup_max_usd
+        if cost is None or cost == 0 or value is None:
+            return None
+        return (value / cost * 100).quantize(Decimal("0.01"))
 product_primitives = db.Table(
     "product_primitives",
     db.Column("product_id", db.Integer, db.ForeignKey("products.id"), primary_key=True),

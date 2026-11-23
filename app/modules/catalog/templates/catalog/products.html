@@ -62,6 +62,18 @@
         <small>Нужны заполненные Client-Id, Api-Key и offer_id товара.</small>
     </form>
     {% endif %}
+    {% if tab == 'stock' and ozon_marketplaces %}
+    <form method="POST" action="{{ url_for('catalog.import_ozon_stock') }}" class="filter-form ozon-import-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <select name="marketplace_id" class="form-control">
+            <option value="">Все магазины Ozon</option>
+            {% for m in ozon_marketplaces %}
+            <option value="{{ m.id }}" {% if marketplace_id == m.id %}selected{% endif %}>{{ m.short_name or m.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary btn-sm">Обновить остатки FBS из Ozon</button>
+    </form>
+    {% endif %}
 
     {% if products %}
         <div class="table-wrap">
@@ -87,15 +99,13 @@
                         <th>СПБ ОША</th>
                         <th>СПБ СВХ</th>
                         <th>СПБ БШО</th>
+                        <th>FBS Ozon</th>
                         {% else %}
                         <th>Штрихкод</th>
                         <th>Название</th>
-                        <th>Я_ПШТ</th>
-                        <th>О_ПШТ</th>
-                        <th>WB_ПШТ</th>
-                        <th>Я_Сол</th>
-                        <th>О_Сол</th>
-                        <th>WB_Сол</th>
+                        {% for m in marketplaces %}
+                        <th>{{ m.short_name or m.name }}</th>
+                        {% endfor %}
                         {% endif %}
                         <th>Действия</th>
                     </tr>
@@ -105,8 +115,10 @@
                     {% set ns = namespace(ozon=none) %}
                     {% for link in product.marketplace_links %}
                         {% if link.marketplace and link.marketplace.marketplace_type == ozon_type
-                                            and ns.ozon is none and (not marketplace_id or link.marketplace_id == marketplace_id) %}
-                            {% set ns.ozon = link %}
+                                            and (not marketplace_id or link.marketplace_id == marketplace_id) %}
+                            {% if ns.ozon is none or (link.status == 'v' and ns.ozon.status != 'v') %}
+                                {% set ns.ozon = link %}
+                            {% endif %}
                         {% endif %}
                     {% endfor %}
                     <tr>
@@ -144,16 +156,13 @@
                         <td>{{ product.stock_spb_osh }}</td>
                         <td>{{ product.stock_spb_svh }}</td>
                         <td>{{ product.stock_spb_bsho }}</td>
+                        <td>{% if ns.ozon and ns.ozon.ozon_fbs_stock is not none %}{{ ns.ozon.ozon_fbs_stock }}{% else %}—{% endif %}</td>
                         {% else %}
                         <td>{{ product.barcode or '—' }}</td>
                         <td>{{ product.name }}</td>
-                        {% set ms = product.marketplace_status_map %}
-                        <td>{{ ms.get('Я_ПШТ', '—') }}</td>
-                        <td>{{ ms.get('О_ПШТ', '—') }}</td>
-                        <td>{{ ms.get('WB_ПШТ', '—') }}</td>
-                        <td>{{ ms.get('Я_Сол', '—') }}</td>
-                        <td>{{ ms.get('О_Сол', '—') }}</td>
-                        <td>{{ ms.get('WB_Сол', '—') }}</td>
+                        {% for m in marketplaces %}
+                        <td>{{ product.marketplace_status(m.id) or '—' }}</td>
+                        {% endfor %}
                         {% endif %}
                         <td>
                             <div class="table-actions">

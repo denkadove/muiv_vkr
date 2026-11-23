@@ -164,6 +164,22 @@ def import_ozon() -> Response:
     return redirect(url_for("catalog.products_list", **args))
 
 
+@catalog_bp.route("/products/import-ozon-stock", methods=["POST"])
+@admin_required
+def import_ozon_stock() -> Response:
+    """Импортирует остатки FBS товаров из Ozon Seller API."""
+    from app.modules.catalog.ozon_import import import_ozon_stock as do_import
+
+    marketplace_id = request.form.get("marketplace_id", type=int)
+    result = do_import(marketplace_id)
+    flash(result.summary(), "success" if result.updated else "error")
+
+    args = {"tab": "stock"}
+    if marketplace_id is not None:
+        args["marketplace_id"] = marketplace_id
+    return redirect(url_for("catalog.products_list", **args))
+
+
 @catalog_bp.route("/products/create", methods=["GET", "POST"])
 @admin_required
 def product_create() -> Response | str:

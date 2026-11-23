@@ -162,3 +162,84 @@ def import_ozon_data(marketplace_id: int | None = None) -> ImportResult:
             result.messages.append(f"«{marketplace.name}»: ошибка сохранения: {error}")
 
     return result
+
+
+def import_ozon_stock(marketplace_id: int | None = None) -> ImportResult:
+    """Обновляет остатки FBS из Ozon для одного или всех магазинов."""
+    result = ImportResult()
+
+    query = Marketplace.query.filter_by(marketplace_type=OZON_MARKETPLACE_TYPE)
+    if marketplace_id is not None:
+        query = query.filter(Marketplace.id == marketplace_id)
+    marketplaces = query.order_by(Marketplace.id).all()
+
+    if not marketplaces:
+        result.messages.append("Магазинов типа «Озон» не найдено.")
+        return result
+
+    for marketplace in marketplaces:
+        if not marketplace.client_id or not marketplace.api_key:
+            result.skipped += 1
+            result.messages.append(
+                f"«{marketplace.name}»: не заполнены Client-Id или Api-Key."
+            )
+            continue
+
+        client = get_client(marketplace.marketplace_type)
+        if client is None:
+            result.skipped += 1
+            result.messages.append(
+                f"«{marketplace.name}»: нет клиента для API этого типа."
+            )
+            continue
+
+        links = ProductMarketplace.query.filter(
+            ProductMarketplace.marketplace_id == marketplace.id,
+            ProductMarketplace.external_offer_id.isnot(None),
+            ProductMarketplace.external_offer_id != "",
+        ).all()
+        if not links:
+            result.skipped += 1
+            result.messages.append(
+                f"«{marketplace.name}»: не заполнены offer_id у товаров."
+            )
+            continue
+
+        by_offer: dict[str, list[ProductMarketplace]] = {}
+        for link in links:
+            offer_id = str(link.external_offer_id).strip()
+            by_offer.setdefault(offer_id, []).append(link)
+        offers = list(by_offer)
+
+        credentials = MarketplaceCredentials(
+            client_id=marketplace.client_id,
+            api_key=marketplace.api_key,
+        )
+        for start in range(0, len(offers), OFFER_CHUNK_SIZE):
+            chunk = offers[start:start + OFFER_CHUNK_SIZE]
+            try:
+                stocks = client.fetch_fbs_stocks(chunk, credentials)
+            except MarketplaceApiError as error:
+                result.failed += sum(len(by_offer[offer]) for offer in chunk)
+                result.messages.append(f"«{marketplace.name}»: {error}")
+                for offer in chunk:
+                    for link in by_offer[offer]:
+                        link.ozon_error = str(error)
+                continue
+
+            for offer in chunk:
+                targets = by_offer[offer]
+                value = stocks.get(offer)
+                for link in targets:
+                    link.ozon_fbs_stock = value
+                    link.ozon_error = None
+                    result.updated += 1
+
+        try:
+            db.session.commit()
+        except Exception as error:
+            db.session.rollback()
+            result.failed += len(links)
+            result.messages.append(f"«{marketplace.name}»: ошибка сохранения: {error}")
+
+    return result

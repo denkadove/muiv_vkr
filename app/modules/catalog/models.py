@@ -46,6 +46,7 @@ class ProductMarketplace(db.Model):
     ozon_price = db.Column(db.Numeric(10, 2), nullable=True)
     ozon_updated_at = db.Column(db.DateTime, nullable=True)
     ozon_error = db.Column(db.String(255), nullable=True)
+    ozon_fbs_stock = db.Column(db.Integer, nullable=True)
 
     product = db.relationship("Product", back_populates="marketplace_links")
     marketplace = db.relationship("Marketplace", back_populates="product_links")

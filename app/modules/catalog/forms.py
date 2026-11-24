@@ -12,7 +12,7 @@ class MarketplaceStatusForm(FlaskForm):
     """Строка статуса размещения на маркетплейсе."""
 
     marketplace_id = HiddenField()
-    external_offer_id = StringField("Offer ID", validators=[Length(max=255)])
+    external_offer_id = StringField("Offer ID", validators=[Length(max=255, message="Не более 255 символов.")])
     status = SelectField("Статус", choices=[
         ("v", "Размещён"),
         ("o", "На модерации"),
@@ -24,8 +24,8 @@ class MarketplaceStatusForm(FlaskForm):
 class PrimitiveLineForm(FlaskForm):
     """Строка состава товара: примитив + количество."""
 
-    primitive_id = StringField("Примитив", validators=[DataRequired()])
-    quantity = IntegerField("Кол-во", validators=[DataRequired(), NumberRange(min=1)], default=1)
+    primitive_id = StringField("Примитив", validators=[DataRequired(message="Поле обязательно для заполнения.")])
+    quantity = IntegerField("Кол-во", validators=[DataRequired(message="Поле обязательно для заполнения."), NumberRange(min=1, message="Значение должно быть не меньше 1.")], default=1)
 
     def validate_primitive_id(self, field):
         value = (field.data or "").strip()
@@ -54,18 +54,18 @@ class PrimitiveLineForm(FlaskForm):
 class ProductForm(FlaskForm):
     """Создание и редактирование товара."""
 
-    name = StringField("Название", validators=[DataRequired(), Length(max=255)])
-    sku = StringField("Артикул (SKU)", validators=[Length(max=255)])
-    barcode = StringField("Штрихкод", validators=[Length(max=32)])
-    selling_price = DecimalField("Цена продажи, $", validators=[Optional(), NumberRange(min=0)], places=2)
-    weight = FloatField("Вес, кг", validators=[Optional(), NumberRange(min=0)])
-    length = FloatField("Длина, см", validators=[Optional(), NumberRange(min=0)])
-    width = FloatField("Ширина, см", validators=[Optional(), NumberRange(min=0)])
-    height = FloatField("Высота, см", validators=[Optional(), NumberRange(min=0)])
-    brand = StringField("Бренд", validators=[Length(max=255)])
-    country = StringField("Страна", validators=[Length(max=255)])
-    warranty = StringField("Гарантия", validators=[Length(max=255)])
-    video_url = StringField("Ссылка на видео", validators=[Optional(), URL(), Length(max=500)])
+    name = StringField("Название", validators=[DataRequired(message="Поле обязательно для заполнения."), Length(max=255, message="Не более 255 символов.")])
+    sku = StringField("Артикул (SKU)", validators=[Length(max=255, message="Не более 255 символов.")])
+    barcode = StringField("Штрихкод", validators=[Length(max=32, message="Не более 32 символов.")])
+    selling_price = DecimalField("Цена продажи, $", validators=[Optional(), NumberRange(min=0, message="Значение не может быть отрицательным.")], places=2)
+    weight = FloatField("Вес, кг", validators=[Optional(), NumberRange(min=0, message="Значение не может быть отрицательным.")])
+    length = FloatField("Длина, см", validators=[Optional(), NumberRange(min=0, message="Значение не может быть отрицательным.")])
+    width = FloatField("Ширина, см", validators=[Optional(), NumberRange(min=0, message="Значение не может быть отрицательным.")])
+    height = FloatField("Высота, см", validators=[Optional(), NumberRange(min=0, message="Значение не может быть отрицательным.")])
+    brand = StringField("Бренд", validators=[Length(max=255, message="Не более 255 символов.")])
+    country = StringField("Страна", validators=[Length(max=255, message="Не более 255 символов.")])
+    warranty = StringField("Гарантия", validators=[Length(max=255, message="Не более 255 символов.")])
+    video_url = StringField("Ссылка на видео", validators=[Optional(), URL(message="Введите корректный URL."), Length(max=500, message="Не более 500 символов.")])
     certificate = FileField("Сертификат соответствия")
     images = MultipleFileField("Фото товара")
     active = BooleanField("Товар активен", default=True)
@@ -79,33 +79,33 @@ class ProductForm(FlaskForm):
 class CategoryForm(FlaskForm):
     """Создание и редактирование категории."""
 
-    name = StringField("Название", validators=[DataRequired(), Length(max=255)])
+    name = StringField("Название", validators=[DataRequired(message="Поле обязательно для заполнения."), Length(max=255, message="Не более 255 символов.")])
     active = BooleanField("Категория активна", default=True)
     sort_order = IntegerField("Порядок сортировки", default=0)
-    processing_cost = DecimalField("Стоимость обработки, руб", validators=[NumberRange(min=0)], places=2, default=0)
-    coinvest_factor = DecimalField("Коэф. соинвеста", validators=[NumberRange(min=0)], places=2, default=0.5)
+    processing_cost = DecimalField("Стоимость обработки, руб", validators=[NumberRange(min=0, message="Значение не может быть отрицательным.")], places=2, default=0)
+    coinvest_factor = DecimalField("Коэф. соинвеста", validators=[NumberRange(min=0, message="Значение не может быть отрицательным.")], places=2, default=0.5)
     submit = SubmitField("Сохранить")
 
 
 class PrimitiveForm(FlaskForm):
     """Создание и редактирование примитива."""
 
-    sku = StringField("Артикул (SKU)", validators=[DataRequired(), Length(max=255)])
-    name = StringField("Название", validators=[DataRequired(), Length(max=255)])
-    price = DecimalField("Цена, $", validators=[DataRequired(), NumberRange(min=0)], places=2)
+    sku = StringField("Артикул (SKU)", validators=[DataRequired(message="Поле обязательно для заполнения."), Length(max=255, message="Не более 255 символов.")])
+    name = StringField("Название", validators=[DataRequired(message="Поле обязательно для заполнения."), Length(max=255, message="Не более 255 символов.")])
+    price = DecimalField("Цена, $", validators=[DataRequired(message="Поле обязательно для заполнения."), NumberRange(min=0, message="Значение не может быть отрицательным.")], places=2)
     submit = SubmitField("Сохранить")
 
 
 class MarketplaceForm(FlaskForm):
     """Создание и редактирование маркетплейса."""
 
-    name = StringField("Название", validators=[DataRequired(), Length(max=255)])
+    name = StringField("Название", validators=[DataRequired(message="Поле обязательно для заполнения."), Length(max=255, message="Не более 255 символов.")])
     marketplace_type = SelectField("Тип магазина", choices=[
         ("Яндекс", "Яндекс"),
         ("Озон", "Озон"),
         ("WB", "WB"),
-    ], validators=[DataRequired()])
-    api_key = StringField("Api-ключ", validators=[DataRequired(), Length(max=255)])
-    client_id = StringField("Client-Id (Ozon)", validators=[Optional(), Length(max=255)])
+    ], validators=[DataRequired(message="Поле обязательно для заполнения.")])
+    api_key = StringField("Api-ключ", validators=[DataRequired(message="Поле обязательно для заполнения."), Length(max=255, message="Не более 255 символов.")])
+    client_id = StringField("Client-Id (Ozon)", validators=[Optional(), Length(max=255, message="Не более 255 символов.")])
     description = TextAreaField("Описание")
     submit = SubmitField("Сохранить")

@@ -39,6 +39,16 @@ def build_breadcrumbs():
     path = request.path.strip("/")
 
     parts = path.split("/") if path else []
+
+    public_names = {
+        "about": "О проекте",
+        "products": "Товары",
+        "feedback": "Обратная связь",
+    }
+    if path in public_names:
+        breadcrumbs.append({"name": public_names[path], "url": None})
+        return breadcrumbs
+
     # /admin/users/123/edit -> ['admin', 'users', '123', 'edit']
     # расширение с собственным префиксом -> ['reports', '123', 'edit']
     offset = 1 if parts and parts[0] == "admin" else 0

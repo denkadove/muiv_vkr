@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "structure/money.html" import price_pair with context %}
+{% block title %}Товары — {{ config.APP_NAME }}{% endblock %}
+{% block content %}
+    <h1>Товары</h1>
+
+    {% if products %}
+        <ul class="product-list">
+            {% for product in products %}
+            <li class="product-list__item">
+                <span class="product-list__id">{{ product.id }}</span>
+                <span class="product-list__name">{{ product.name }}</span>
+                <span class="product-list__marketplaces">{{ product.marketplaces | map(attribute='name') | join(', ') }}</span>
+                <span class="product-list__price">{{ price_pair(product.selling_price if product.selling_price is not none else product.cost_price, exchange_rate) }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% include 'structure/pagination.html' %}
+    {% else %}
+        <p>Товаров в системе пока нет.</p>
+    {% endif %}
+{% endblock %}

@@ -19,9 +19,17 @@ def register_routes(app: Flask) -> None:
 
     @app.route("/")
     def index() -> str:
+        return render_template("index.html")
+
+    @app.route("/about")
+    def about() -> str:
+        return render_template("about.html")
+
+    @app.route("/products")
+    def products_public() -> str:
         page = request.args.get("page", 1, type=int)
         pagination = Product.query.order_by(Product.id).paginate(page=page, per_page=20, error_out=False)
-        return render_template("index.html", products=pagination.items, pagination=pagination)
+        return render_template("products.html", products=pagination.items, pagination=pagination)
 
     @app.route("/profile")
     @login_required

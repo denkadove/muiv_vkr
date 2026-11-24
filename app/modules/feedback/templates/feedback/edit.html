@@ -1,0 +1,47 @@
+{% extends "structure/admin_base.html" %}
+{% block title %}Обращение {{ feedback.id }} — {{ config.APP_NAME }}{% endblock %}
+{% block admin_content %}
+    <h2>Обращение #{{ feedback.id }}</h2>
+
+    <div class="form-group">
+        <label class="form-label">Заголовок</label>
+        <p>{{ feedback.title }}</p>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Текст</label>
+        <p>{{ feedback.text }}</p>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Email</label>
+        <p>{{ feedback.email }}</p>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Тип</label>
+        <p>{{ dict(Feedback.FEEDBACK_TYPES).get(feedback.type, feedback.type) }}</p>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Дата</label>
+        <p>{{ feedback.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+    </div>
+    {% if feedback.user %}
+    <div class="form-group">
+        <label class="form-label">Пользователь</label>
+        <p>{{ feedback.user.username }} ({{ feedback.user.email }})</p>
+    </div>
+    {% endif %}
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.status.label(class="form-label") }} {{ form.status(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.admin_comment.label(class="form-label") }} {{ form.admin_comment(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+
+    <p><a href="{{ url_for('feedback_admin.feedback_list') }}">← К списку</a></p>
+{% endblock %}

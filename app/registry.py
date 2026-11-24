@@ -93,6 +93,25 @@ ADMIN_EXTENSIONS: tuple[AdminExtension, ...] = (
         models=("app.modules.settings.models",),
     ),
     AdminExtension(
+        key="feedback",
+        title="Обратная связь",
+        blueprint_path="app.modules.feedback:feedback_admin_bp",
+        menu=(MenuSection("Основное", (
+            MenuItem("Обратная связь", "feedback_admin.feedback_list", (
+                "feedback_admin.feedback_list",
+                "feedback_admin.feedback_edit",
+                "feedback_admin.feedback_delete",
+            )),
+        )),),
+        breadcrumbs={
+            "feedback": BreadcrumbSection(
+                "Обратная связь", "обращения", "feedback_admin.feedback_list",
+                "app.modules.feedback.models.Feedback", "title",
+            ),
+        },
+        models=("app.modules.feedback.models",),
+    ),
+    AdminExtension(
         key="catalog",
         title="Каталог",
         blueprint_path="app.modules.catalog:catalog_bp",

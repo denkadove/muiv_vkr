@@ -70,6 +70,10 @@ p {
     justify-content: space-between;
     gap: 8px 16px;
     padding: 10px 16px;
+    max-width: 980px;
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
 }
 
 .site-logo {
@@ -172,6 +176,123 @@ p {
     padding: 8px 12px;
 }
 
+/* Горизонтальное меню публичных страниц */
+.main-menu {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 8px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    flex-wrap: wrap;
+    max-width: 980px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+.main-menu__link {
+    padding: 6px 14px;
+    text-decoration: none;
+    color: var(--color-muted);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: background 0.15s, color 0.15s;
+}
+
+.main-menu__link:hover {
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
+}
+
+.main-menu__link.active {
+    background: var(--color-accent);
+    color: #ffffff;
+}
+
+/* Форма обратной связи — выделенный блок */
+.feedback-form {
+    padding: 20px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.feedback-form .form-group {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    flex: 1 1 auto;
+}
+
+.feedback-form .form-control {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    display: block;
+}
+
+/* Контакты на странице обратной связи */
+.contacts {
+    padding: 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+}
+
+.contacts h2 {
+    margin-bottom: 8px;
+}
+
+.feedback-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+@media (min-width: 960px) {
+    .feedback-layout {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 24px;
+    }
+    .feedback-form {
+        flex: 2 1 0;
+        min-width: 0;
+        width: 100%;
+    }
+    .contacts {
+        flex: 0 0 300px;
+        max-width: 300px;
+    }
+}
+
+.product-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+}
+
+.product-list__item {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-border);
+    align-items: center;
+}
+
+.product-list__name {
+    flex: 1;
+    min-width: 120px;
+}
+
 /* Вкладки */
 .tabs {
     display: flex;
@@ -245,6 +366,11 @@ p {
     color: var(--color-muted);
     background: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
+    max-width: 980px;
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+    text-align: left;
 }
 
 .breadcrumbs a {
@@ -414,7 +540,7 @@ p {
 
 /* 7. Формы */
 form {
-    max-width: 480px;
+    max-width: 100%;
 }
 
 /* 7.1 Карточка форм авторизации */
@@ -782,5 +908,11 @@ datalist option {
 @media (min-width: 960px) {
     .site-main {
         padding: 32px 24px;
+        max-width: 980px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .site-main--admin {
+        max-width: 100%;
     }
 }

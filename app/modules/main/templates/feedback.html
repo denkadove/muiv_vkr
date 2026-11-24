@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Обратная связь — {{ config.APP_NAME }}{% endblock %}
+{% block content %}
+    <h1>Обратная связь</h1>
+
+    <div class="feedback-layout">
+        <div class="feedback-form">
+            <form method="POST" action="{{ url_for('feedback.feedback_create') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div class="form-group">
+                    <label class="form-label" for="title">Заголовок</label>
+                    <input type="text" id="title" name="title" class="form-control" placeholder="Введите заголовок" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="text">Текст</label>
+                    <textarea id="text" name="text" class="form-control" rows="4" placeholder="Введите текст обращения" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="email">Email для обратной связи</label>
+                    <input type="email" id="email" name="email" class="form-control" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="type">Тип обращения</label>
+                    <select id="type" name="type" class="form-control" required>
+                        <option value="question">Вопрос</option>
+                        <option value="suggestion">Предложение</option>
+                        <option value="bug">Сообщить об ошибке</option>
+                    </select>
+                </div>
+                {% if captcha_question %}
+                <div class="form-group">
+                    <label class="form-label" for="captcha">Капча: {{ captcha_question }}</label>
+                    <input type="text" id="captcha" name="captcha" class="form-control" required />
+                </div>
+                {% endif %}
+                <div class="form-group">
+                    <label class="checkbox-field">
+                        <input type="checkbox" name="agree" value="1" class="checkbox-input" required />
+                        <span class="checkbox-label">Согласен с <a href="#">политикой конфиденциальности</a></span>
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary">Отправить</button>
+            </form>
+        </div>
+
+        <div class="contacts">
+            <h2>Контакты</h2>
+            <p><strong>Телефон:</strong> +7 (000) 000-00-00</p>
+            <p><strong>Email:</strong> info@example.com</p>
+            <p><strong>Адрес:</strong> г. Москва, ул. Примерная, д. 1</p>
+            <p><strong>Режим работы:</strong> Пн–Пт, 9:00–18:00</p>
+        </div>
+    </div>
+{% endblock %}

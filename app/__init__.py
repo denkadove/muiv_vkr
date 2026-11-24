@@ -27,6 +27,7 @@ def create_app() -> Flask:
     migrate.init_app(app, db)
 
     from app.modules.auth import auth_bp
+    from app.modules.feedback import feedback_bp
     from app.modules.main import main_bp
 
     login_manager.login_view = "auth.login"
@@ -36,8 +37,9 @@ def create_app() -> Flask:
     from app.modules.settings.constants import ADMIN_GROUP_ID
     from app.modules.auth.models import User
 
-    app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(feedback_bp)
+    app.register_blueprint(main_bp)
 
     # Админка — хост: подключает расширения и их модели по реестру.
     for extension in ADMIN_EXTENSIONS:

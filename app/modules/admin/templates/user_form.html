@@ -27,6 +27,22 @@
             </div>
             {% endif %}
         </div>
+
+        <div class="form-group">
+            {{ form.name.label(class="form-label") }} {{ form.name(class="form-control") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.phone.label(class="form-label") }} {{ form.phone(class="form-control") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.position.label(class="form-label") }} {{ form.position(class="form-control") }}
+        </div>
+
+        <div class="form-group">
+            {{ form.department.label(class="form-label") }} {{ form.department(class="form-control") }}
+        </div>
         {% if form.password %}
         <div class="form-group">
             {{ form.password.label(class="form-label") }} {{ form.password(class="form-control") }}

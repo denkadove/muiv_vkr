@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Профиль {{ user.username }} — {{ config.APP_NAME }}{% endblock %}
+{% block content %}
+    <div class="profile-card">
+        <div class="profile-avatar">
+            {% if user.avatar %}
+            <img src="{{ url_for('static', filename='uploads/avatars/' + user.avatar) }}" alt="Аватар" />
+            {% else %}
+            <div class="avatar-placeholder">👤</div>
+            {% endif %}
+        </div>
+        <div class="profile-info">
+            <h2>{{ user.name or user.username }}</h2>
+            <p><strong>Логин:</strong> {{ user.username }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Группа:</strong> {{ user.group.name if user.group else '—' }}</p>
+            <p><strong>Дата регистрации:</strong> {{ user.created.strftime('%d.%m.%Y') if user.created else '—' }}</p>
+            <p><strong>Последний визит:</strong> {{ user.last_visit.strftime('%d.%m.%Y %H:%M') if user.last_visit else '—' }}</p>
+            {% if user.phone %}<p><strong>Телефон:</strong> {{ user.phone }}</p>{% endif %}
+            {% if user.position %}<p><strong>Должность:</strong> {{ user.position }}</p>{% endif %}
+            {% if user.department %}<p><strong>Отдел:</strong> {{ user.department }}</p>{% endif %}
+        </div>
+    </div>
+
+    {% if can_edit %}
+    <a class="btn btn-primary" href="{{ url_for('profile_edit', user_id=user.id) }}">Редактировать</a>
+    {% endif %}
+{% endblock %}

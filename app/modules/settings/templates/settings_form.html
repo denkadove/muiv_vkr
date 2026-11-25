@@ -4,6 +4,7 @@
     <h2>Настройки приложения</h2>
     <form method="POST">
         {{ form.hidden_tag() }}
+        {% if is_admin %}
         <div class="form-group">
             {{ form.feed_url.label(class="form-label") }} {{ form.feed_url(class="form-control") }}
             {% if form.feed_url.errors %}
@@ -21,6 +22,7 @@
                 </div>
             {% endif %}
         </div>
+        {% endif %}
         <div class="form-group">
             {{ form.dollar_exchange_rate.label(class="form-label") }} {{ form.dollar_exchange_rate(class="form-control") }}
             {% if form.dollar_exchange_rate.errors %}

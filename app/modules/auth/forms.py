@@ -1,8 +1,11 @@
 """Формы аутентификации."""
 
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, PasswordField, StringField, SubmitField
-from wtforms.validators import DataRequired, Email, EqualTo, Length
+from flask_wtf.file import FileField
+from wtforms import BooleanField, PasswordField, SelectField, StringField, SubmitField, TextAreaField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional
+
+from app.modules.settings.constants import GROUP_CHOICES
 
 
 class RegisterForm(FlaskForm):
@@ -34,3 +37,21 @@ class LoginForm(FlaskForm):
     password = PasswordField("Пароль", validators=[DataRequired(message="Поле обязательно для заполнения.")])
     remember_me = BooleanField("Запомнить меня")
     submit = SubmitField("Войти")
+
+
+class ProfileForm(FlaskForm):
+    """Редактирование профиля пользователя."""
+
+    name = StringField("Имя", validators=[Optional(), Length(max=255, message="Не более 255 символов.")])
+    phone = StringField("Телефон", validators=[Optional(), Length(max=50, message="Не более 50 символов.")])
+    position = StringField("Должность", validators=[Optional(), Length(max=255, message="Не более 255 символов.")])
+    department = StringField("Отдел", validators=[Optional(), Length(max=255, message="Не более 255 символов.")])
+    avatar = FileField("Аватар")
+    email = StringField("Email", validators=[Optional(), Email(message="Введите корректный email.")])
+    group_id = SelectField("Группа", coerce=int, choices=GROUP_CHOICES, validators=[Optional()])
+    password = PasswordField("Новый пароль", validators=[Optional(), Length(min=6, message="Не менее 6 символов.")])
+    confirm_password = PasswordField(
+        "Подтверждение пароля",
+        validators=[EqualTo("password", message="Пароли должны совпадать")],
+    )
+    submit = SubmitField("Сохранить")

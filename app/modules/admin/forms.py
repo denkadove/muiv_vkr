@@ -2,7 +2,7 @@
 
 from flask_wtf import FlaskForm
 from wtforms import BooleanField, PasswordField, StringField, SubmitField, SelectField
-from wtforms.validators import DataRequired, Email, EqualTo, Length
+from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional
 
 from app.modules.settings.constants import GROUP_CHOICES, USER_GROUP_ID
 
@@ -30,6 +30,10 @@ class UserForm(FlaskForm):
 
     username = StringField("Логин", validators=[DataRequired(message="Поле обязательно для заполнения."), Length(min=3, max=255, message="От 3 до 255 символов.")])
     email = StringField("Email", validators=[DataRequired(message="Поле обязательно для заполнения."), Email(message="Введите корректный email.")])
+    name = StringField("Имя", validators=[Optional(), Length(max=255, message="Не более 255 символов.")])
+    phone = StringField("Телефон", validators=[Optional(), Length(max=50, message="Не более 50 символов.")])
+    position = StringField("Должность", validators=[Optional(), Length(max=255, message="Не более 255 символов.")])
+    department = StringField("Отдел", validators=[Optional(), Length(max=255, message="Не более 255 символов.")])
     active = BooleanField("Учётная запись активна")
     group_id = SelectField("Группа", coerce=int, choices=GROUP_CHOICES)
     submit = SubmitField("Сохранить")

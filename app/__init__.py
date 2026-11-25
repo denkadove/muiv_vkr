@@ -5,7 +5,7 @@ import os
 
 from flask import Flask, session
 
-from app.extensions import bcrypt, csrf, db, login_manager, migrate
+from app.extensions import bcrypt, csrf, db, login_manager, mail, migrate
 from app.registry import ADMIN_EXTENSIONS, get_admin_menu
 
 # Общие экземпляры расширений, привязываются к приложению в create_app
@@ -24,6 +24,7 @@ def create_app() -> Flask:
     db.init_app(app)
     csrf.init_app(app)
     login_manager.init_app(app)
+    mail.init_app(app)
     migrate.init_app(app, db)
 
     from app.modules.auth import auth_bp
@@ -34,7 +35,7 @@ def create_app() -> Flask:
     login_manager.login_message = "Войдите, чтобы получить доступ к этой странице."
     login_manager.login_message_category = "error"
 
-    from app.modules.settings.constants import ADMIN_GROUP_ID
+    from app.modules.settings.constants import ADMIN_GROUP_ID, MANAGER_GROUP_ID
     from app.modules.auth.models import User
 
     app.register_blueprint(auth_bp)
@@ -53,7 +54,21 @@ def create_app() -> Flask:
 
     @app.context_processor
     def inject_admin_group_id() -> dict[str, int]:
-        return {"ADMIN_GROUP_ID": ADMIN_GROUP_ID}
+        return {
+            "ADMIN_GROUP_ID": ADMIN_GROUP_ID,
+            "MANAGER_GROUP_ID": MANAGER_GROUP_ID,
+        }
+
+    @app.context_processor
+    def inject_user_role() -> dict:
+        from flask_login import current_user
+
+        is_admin = False
+        is_manager = False
+        if current_user.is_authenticated:
+            is_admin = current_user.group_id == ADMIN_GROUP_ID
+            is_manager = current_user.group_id == MANAGER_GROUP_ID
+        return {"is_admin": is_admin, "is_manager": is_manager}
 
     @app.context_processor
     def inject_admin_menu() -> dict:

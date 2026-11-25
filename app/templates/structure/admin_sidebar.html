@@ -5,10 +5,13 @@
         <summary class="admin-menu-title">{{ section.title }}</summary>
         <ul class="admin-menu-list">
             {% for item in section.items %}
+            {% set admin_only = item.endpoint in ('admin.users_list', 'admin.groups_list', 'catalog.marketplaces_list', 'feedback_admin.feedback_list') %}
+            {% if not admin_only or is_admin or (item.endpoint == 'settings.settings_edit' and is_manager) %}
             {% set is_active = request.endpoint in item.active_endpoints %}
             <li>
                 <a class="admin-menu-link{{ ' is-active' if is_active else '' }}" {% if is_active %}aria-current="page"{% endif %} href="{{ url_for(item.endpoint) }}">{{ item.title }}</a>
             </li>
+            {% endif %}
             {% endfor %}
         </ul>
     </details>

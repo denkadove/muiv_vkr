@@ -4,7 +4,7 @@ from flask import Response, flash, redirect, render_template, request, url_for
 from flask_sqlalchemy.pagination import Pagination
 
 from app.extensions import db
-from app.modules.auth.decorators import admin_required
+from app.modules.auth.decorators import admin_required, manager_required
 from app.modules.catalog import catalog_bp
 from app.modules.catalog.forms import (
     CategoryForm,
@@ -89,7 +89,7 @@ def _prepare_marketplace_statuses(form, marketplaces, product=None) -> None:
 
 
 @catalog_bp.route("/products")
-@admin_required
+@manager_required
 def products_list() -> str:
     tab = request.args.get("tab", "prices")
     q = request.args.get("q", "").strip()
@@ -151,7 +151,7 @@ def products_list() -> str:
 
 
 @catalog_bp.route("/products/import-ozon", methods=["POST"])
-@admin_required
+@manager_required
 def import_ozon() -> Response:
     """Импортирует цены и комиссии товаров из Ozon Seller API."""
     marketplace_id = request.form.get("marketplace_id", type=int)
@@ -165,7 +165,7 @@ def import_ozon() -> Response:
 
 
 @catalog_bp.route("/products/import-ozon-stock", methods=["POST"])
-@admin_required
+@manager_required
 def import_ozon_stock() -> Response:
     """Импортирует остатки FBS товаров из Ozon Seller API."""
     from app.modules.catalog.ozon_import import import_ozon_stock as do_import
@@ -181,7 +181,7 @@ def import_ozon_stock() -> Response:
 
 
 @catalog_bp.route("/products/create", methods=["GET", "POST"])
-@admin_required
+@manager_required
 def product_create() -> Response | str:
     tab = request.args.get("tab", "main")
     form = ProductForm()
@@ -207,7 +207,7 @@ def product_create() -> Response | str:
 
 
 @catalog_bp.route("/products/<int:product_id>/edit", methods=["GET", "POST"])
-@admin_required
+@manager_required
 def product_edit(product_id: int) -> Response | str:
     tab = request.args.get("tab", "main")
     product: Product | None = db.session.get(Product, product_id)
@@ -255,7 +255,7 @@ def product_edit(product_id: int) -> Response | str:
 
 
 @catalog_bp.route("/products/<int:product_id>/delete", methods=["POST"])
-@admin_required
+@manager_required
 def product_delete(product_id: int) -> Response:
     try:
         delete_product(product_id)
@@ -267,7 +267,7 @@ def product_delete(product_id: int) -> Response:
 
 
 @catalog_bp.route("/categories")
-@admin_required
+@manager_required
 def categories_list() -> str:
     get_categories()  # создаёт категорию по умолчанию при первом посещении
     q = request.args.get("q", "").strip()
@@ -280,7 +280,7 @@ def categories_list() -> str:
 
 
 @catalog_bp.route("/categories/create", methods=["GET", "POST"])
-@admin_required
+@manager_required
 def category_create() -> Response | str:
     form = CategoryForm()
     if form.validate_on_submit():
@@ -297,7 +297,7 @@ def category_create() -> Response | str:
 
 
 @catalog_bp.route("/categories/<int:category_id>/edit", methods=["GET", "POST"])
-@admin_required
+@manager_required
 def category_edit(category_id: int) -> Response | str:
     category: Category | None = db.session.get(Category, category_id)
     if category is None:
@@ -319,7 +319,7 @@ def category_edit(category_id: int) -> Response | str:
 
 
 @catalog_bp.route("/categories/<int:category_id>/delete", methods=["POST"])
-@admin_required
+@manager_required
 def category_delete(category_id: int) -> Response:
     try:
         delete_category(category_id)
@@ -390,7 +390,7 @@ def marketplace_delete(marketplace_id: int) -> Response:
 
 
 @catalog_bp.route("/primitives")
-@admin_required
+@manager_required
 def primitives_list() -> str:
     q = request.args.get("q", "").strip()
     no_stock = request.args.get("no_stock")
@@ -417,7 +417,7 @@ def primitives_list() -> str:
 
 
 @catalog_bp.route("/primitives/create", methods=["GET", "POST"])
-@admin_required
+@manager_required
 def primitive_create() -> Response | str:
     form = PrimitiveForm()
     if form.validate_on_submit():
@@ -432,7 +432,7 @@ def primitive_create() -> Response | str:
 
 
 @catalog_bp.route("/primitives/<int:primitive_id>/edit", methods=["GET", "POST"])
-@admin_required
+@manager_required
 def primitive_edit(primitive_id: int) -> Response | str:
     primitive: Primitive | None = db.session.get(Primitive, primitive_id)
     if primitive is None:
@@ -452,7 +452,7 @@ def primitive_edit(primitive_id: int) -> Response | str:
 
 
 @catalog_bp.route("/primitives/<int:primitive_id>/delete", methods=["POST"])
-@admin_required
+@manager_required
 def primitive_delete(primitive_id: int) -> Response:
     try:
         delete_primitive(primitive_id)
@@ -464,7 +464,7 @@ def primitive_delete(primitive_id: int) -> Response:
 
 
 @catalog_bp.route("/primitives/import", methods=["POST"])
-@admin_required
+@manager_required
 def primitives_import() -> Response:
     feed_url = get_setting("feed_url")
     try:

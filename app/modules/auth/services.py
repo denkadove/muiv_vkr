@@ -72,6 +72,10 @@ def update_user(user_id: int, form) -> User:
 
     user.username = form.username.data
     user.email = form.email.data
+    user.name = form.name.data.strip() if form.name.data else None
+    user.phone = form.phone.data.strip() if form.phone.data else None
+    user.position = form.position.data.strip() if form.position.data else None
+    user.department = form.department.data.strip() if form.department.data else None
     user.active = form.active.data
     user.group_id = form.group_id.data
     try:

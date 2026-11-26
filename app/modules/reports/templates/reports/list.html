@@ -1,0 +1,48 @@
+{% extends "structure/admin_base.html" %}
+{% block title %}Отчёты — {{ config.APP_NAME }}{% endblock %}
+{% block admin_content %}
+    <div class="page-header">
+        <h2>Отчёты</h2>
+        <a class="btn btn-primary" href="{{ url_for('reports.report_create') }}">Создать отчёт</a>
+    </div>
+
+    {% if reports %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Название</th>
+                        <th>Дата создания</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for report in reports %}
+                    <tr>
+                        <td>{{ report.id }}</td>
+                        <td>{{ report.name }}</td>
+                        <td>{{ report.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>{{ report.status }}</td>
+                        <td>
+                            <div class="table-actions">
+                                {% if report.status == 'ready' and report.file_path %}
+                                <a class="btn btn-secondary btn-sm" href="{{ url_for('reports.report_download', report_id=report.id) }}">Скачать</a>
+                                {% endif %}
+                                <form class="js-confirm" method="POST" action="{{ url_for('reports.report_delete', report_id=report.id) }}" data-confirm="Удалить отчёт?" data-confirm-btn="Удалить">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                    <button type="submit" class="btn btn-danger btn-sm">Удалить</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include 'structure/pagination.html' %}
+    {% else %}
+        <p>Отчётов пока нет.</p>
+    {% endif %}
+{% endblock %}

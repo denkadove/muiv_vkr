@@ -246,6 +246,7 @@ class Marketplace(db.Model):
     api_key = db.Column(db.String(255), nullable=True, unique=True)
     # Ozon требует два заголовка: Client-Id и Api-Key
     client_id = db.Column(db.String(255), nullable=True)
+    acquiring_percent = db.Column(db.Numeric(5, 4), nullable=True)
     product_links = db.relationship("ProductMarketplace", back_populates="marketplace", cascade="all, delete-orphan")
 
 

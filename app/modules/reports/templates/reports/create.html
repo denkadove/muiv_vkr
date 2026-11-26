@@ -1,0 +1,30 @@
+{% extends "structure/admin_base.html" %}
+{% block title %}Создание отчёта — {{ config.APP_NAME }}{% endblock %}
+{% block admin_content %}
+    <h2>Создание отчёта</h2>
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.report_key.label(class="form-label") }} {{ form.report_key(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.category_id.label(class="form-label") }} {{ form.category_id(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.marketplace_id.label(class="form-label") }} {{ form.marketplace_id(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
+    </form>
+
+    <h3>Доступные отчёты</h3>
+    <ul>
+        {% for r in reports %}
+        <li><strong>{{ r.title }}</strong> — {{ r.description }}</li>
+        {% endfor %}
+    </ul>
+
+    <p><a href="{{ url_for('reports.reports_list') }}">← К списку отчётов</a></p>
+{% endblock %}

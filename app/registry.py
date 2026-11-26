@@ -112,6 +112,26 @@ ADMIN_EXTENSIONS: tuple[AdminExtension, ...] = (
         models=("app.modules.feedback.models",),
     ),
     AdminExtension(
+        key="reports",
+        title="Отчёты",
+        blueprint_path="app.modules.reports:reports_bp",
+        menu=(MenuSection("Отчёты", (
+            MenuItem("Отчёты", "reports.reports_list", (
+                "reports.reports_list",
+                "reports.report_create",
+                "reports.report_download",
+                "reports.report_delete",
+            )),
+        )),),
+        breadcrumbs={
+            "reports": BreadcrumbSection(
+                "Отчёты", "отчёта", "reports.reports_list",
+                "app.modules.reports.models.Report", "name",
+            ),
+        },
+        models=("app.modules.reports.models",),
+    ),
+    AdminExtension(
         key="catalog",
         title="Каталог",
         blueprint_path="app.modules.catalog:catalog_bp",

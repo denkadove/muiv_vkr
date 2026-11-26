@@ -141,6 +141,15 @@ def import_ozon_data(marketplace_id: int | None = None) -> ImportResult:
                         link.ozon_error = str(error)
                 continue
 
+            # Рассчитываем процент эквайринга из первого найденного товара
+            if items and marketplace.acquiring_percent is None:
+                for item in items.values():
+                    acquiring = as_decimal(item.get("acquiring"))
+                    price = as_decimal((item.get("price") or {}).get("price"))
+                    if acquiring is not None and price and price != 0:
+                        marketplace.acquiring_percent = (acquiring / price).quantize(Decimal("0.0001"))
+                    break
+
             now = datetime.now(timezone.utc)
             for offer in chunk:
                 item = items.get(offer)
